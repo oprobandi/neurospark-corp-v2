@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <!-- Favicon — v2.8: NS monogram icon replaces logo.jpg -->
+    <link rel="icon"             type="image/x-icon"  href="/favicon.ico" />
+    <link rel="icon"             type="image/png"     sizes="32x32"  href="/favicon-32.png" />
+    <link rel="icon"             type="image/png"     sizes="16x16"  href="/favicon-16.png" />
+    <link rel="apple-touch-icon"                      sizes="192x192" href="/favicon-192.png" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+    <!-- Primary meta -->
+    <meta name="description" content="Neurospark Corporation — Nairobi-built autonomous AI agents for East African founders. We automate operations, manage your website, and grow your Google rankings." />
+    <meta name="keywords" content="AI agents Kenya, automation Nairobi, web development East Africa, SEO Kenya, autonomous agents, Neurospark Corporation" />
+    <meta name="author" content="Neurospark Corporation" />
+
+    <!-- Open Graph -->
+    <meta property="og:type"        content="website" />
+    <meta property="og:url"         content="https://neurosparkcorporation.ai/" />
+    <meta property="og:title"       content="Neurospark Corporation — Nairobi-Built. World-Ready." />
+    <meta property="og:description" content="Take back your week. Autonomous AI agents for East African businesses." />
+    <meta property="og:image"       content="https://neurosparkcorporation.ai/logo.jpg" />
+    <meta property="og:locale"      content="en_KE" />
+    <meta property="og:site_name"   content="Neurospark Corporation" />
+
+    <!-- Twitter / X -->
+    <meta name="twitter:card"        content="summary_large_image" />
+    <meta name="twitter:site"        content="@neurosparkcorp" />
+    <meta name="twitter:title"       content="Neurospark Corporation — Nairobi-Built. World-Ready." />
+    <meta name="twitter:description" content="Take back your week. Autonomous AI agents for East African businesses." />
+    <meta name="twitter:image"       content="https://neurosparkcorporation.ai/logo.jpg" />
+
+    <!-- Canonical -->
+    <link rel="canonical" href="https://neurosparkcorporation.ai/" />
+
+    <title>Neurospark Corporation — Nairobi-Built. World-Ready.</title>
+
+    <!--
+      Fonts — v2.5 trim:
+        Removed: Playfair Display 400 (only italic/bold used in UI),
+                 DM Sans 300 and 600 (300 unused; 600 replaced by 500 for body copy),
+                 Space Grotesk 500 (unused weight).
+        Kept:    Playfair Display ital+bold for display/headlines
+                 DM Sans 400+500 for body copy
+                 Space Grotesk 400+700 for agent code badges
+        Saves ~18 kB of font payload on first load.
+    -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;0,900;1,400;1,700&family=DM+Sans:opsz,wght@9..40,400;9..40,500&family=Space+Grotesk:wght@400;700&display=swap"
+      rel="stylesheet"
+    />
+
+    <!-- JSON-LD Structured Data — Organisation + Website -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "Organization",
+          "@id": "https://neurosparkcorporation.ai/#organization",
+          "name": "Neurospark Corporation",
+          "url": "https://neurosparkcorporation.ai",
+          "logo": {
+            "@type": "ImageObject",
+            "url": "https://neurosparkcorporation.ai/logo.jpg"
+          },
+          "description": "Autonomous AI agents built for East African founders.",
+          "address": {
+            "@type": "PostalAddress",
+            "addressLocality": "Nairobi",
+            "addressCountry": "KE"
+          },
+          "contactPoint": {
+            "@type": "ContactPoint",
+            "contactType": "customer service",
+            "email": "hello@neurosparkcorporation.ai",
+            "availableLanguage": ["English", "Swahili"]
+          },
+          "sameAs": [
+            "https://linkedin.com/company/neurospark-corporation",
+            "https://twitter.com/neurosparkcorp",
+            "https://instagram.com/neurosparkcorporation"
+          ]
+        },
+        {
+          "@type": "WebSite",
+          "@id": "https://neurosparkcorporation.ai/#website",
+          "url": "https://neurosparkcorporation.ai",
+          "name": "Neurospark Corporation",
+          "publisher": { "@id": "https://neurosparkcorporation.ai/#organization" }
+        }
+      ]
+    }
+    </script>
+
+    <!-- Plausible Analytics — privacy-first, no cookie banner required -->
+    <!-- Replace 'neurosparkcorporation.ai' with actual domain once live -->
+    <script defer data-domain="neurosparkcorporation.ai" src="https://plausible.io/js/script.js"></script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.jsx"></script>
+  </body>
+</html>

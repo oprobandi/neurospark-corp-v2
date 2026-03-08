@@ -1,0 +1,11 @@
+# robots.txt — Neurospark Corporation
+# https://neurosparkcorporation.ai
+
+User-agent: *
+Allow: /
+
+# Block build artifacts and utility routes
+Disallow: /src/
+Disallow: /.vite/
+
+Sitemap: https://neurosparkcorporation.ai/sitemap.xml

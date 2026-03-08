@@ -1,0 +1,8 @@
+#!/usr/bin/env sh
+. "$(dirname -- "$0")/_/husky.sh"
+
+# Lint all source files — fail fast if errors are found
+npm run lint
+
+# Verify the build compiles without errors before allowing the commit
+npm run build
