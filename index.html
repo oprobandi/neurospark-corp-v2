@@ -2,47 +2,66 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <!-- Favicon — v2.8: NS monogram icon replaces logo.jpg -->
+
+    <!--
+      DARK MODE FOUC PREVENTION — v3.0
+      Must run synchronously before any render. Reads localStorage and applies
+      data-theme="dark" to <html> immediately, preventing the flash of light
+      theme on dark-mode users' first page load.
+      ADR-017: Inline theme script in <head>.
+    -->
+    <script>
+      (function () {
+        try {
+          var stored = localStorage.getItem('ns-theme')
+          var prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches
+          if (stored === 'dark' || (!stored && prefersDark)) {
+            document.documentElement.setAttribute('data-theme', 'dark')
+          }
+        } catch (e) {}
+      })()
+    </script>
+
+    <!-- Favicon — v2.8: NS monogram icon -->
     <link rel="icon"             type="image/x-icon"  href="/favicon.ico" />
-    <link rel="icon"             type="image/png"     sizes="32x32"  href="/favicon-32.png" />
-    <link rel="icon"             type="image/png"     sizes="16x16"  href="/favicon-16.png" />
-    <link rel="apple-touch-icon"                      sizes="192x192" href="/favicon-192.png" />
+    <link rel="icon"             type="image/png"      sizes="32x32"   href="/favicon-32.png" />
+    <link rel="icon"             type="image/png"      sizes="16x16"   href="/favicon-16.png" />
+    <link rel="apple-touch-icon"                       sizes="192x192"  href="/favicon-192.png" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
     <!-- Primary meta -->
     <meta name="description" content="Neurospark Corporation — Nairobi-built autonomous AI agents for East African founders. We automate operations, manage your website, and grow your Google rankings." />
-    <meta name="keywords" content="AI agents Kenya, automation Nairobi, web development East Africa, SEO Kenya, autonomous agents, Neurospark Corporation" />
-    <meta name="author" content="Neurospark Corporation" />
+    <meta name="keywords"    content="AI agents Kenya, automation Nairobi, web development East Africa, SEO Kenya, autonomous agents, Neurospark Corporation, HESABU, payroll Kenya, KRA compliance" />
+    <meta name="author"      content="Neurospark Corporation" />
 
     <!-- Open Graph -->
     <meta property="og:type"        content="website" />
     <meta property="og:url"         content="https://neurosparkcorporation.ai/" />
     <meta property="og:title"       content="Neurospark Corporation — Nairobi-Built. World-Ready." />
-    <meta property="og:description" content="Take back your week. Autonomous AI agents for East African businesses." />
+    <meta property="og:description" content="Take back your week. 13 autonomous AI agents for East African businesses." />
     <meta property="og:image"       content="https://neurosparkcorporation.ai/logo.jpg" />
     <meta property="og:locale"      content="en_KE" />
     <meta property="og:site_name"   content="Neurospark Corporation" />
 
-    <!-- Twitter / X -->
+    <!-- Twitter / X — v3.0: corrected handle from @neurosparkcorp to @o_probandi -->
     <meta name="twitter:card"        content="summary_large_image" />
-    <meta name="twitter:site"        content="@neurosparkcorp" />
+    <meta name="twitter:site"        content="@o_probandi" />
     <meta name="twitter:title"       content="Neurospark Corporation — Nairobi-Built. World-Ready." />
-    <meta name="twitter:description" content="Take back your week. Autonomous AI agents for East African businesses." />
+    <meta name="twitter:description" content="Take back your week. 13 autonomous AI agents for East African businesses." />
     <meta name="twitter:image"       content="https://neurosparkcorporation.ai/logo.jpg" />
 
-    <!-- Canonical -->
+    <!-- Canonical (homepage); per-page canonical injected by useDocumentMeta hook -->
     <link rel="canonical" href="https://neurosparkcorporation.ai/" />
+
+    <!-- Sitemap discovery -->
+    <link rel="sitemap" type="application/xml" href="/sitemap.xml" />
 
     <title>Neurospark Corporation — Nairobi-Built. World-Ready.</title>
 
     <!--
-      Fonts — v2.5 trim:
-        Removed: Playfair Display 400 (only italic/bold used in UI),
-                 DM Sans 300 and 600 (300 unused; 600 replaced by 500 for body copy),
-                 Space Grotesk 500 (unused weight).
-        Kept:    Playfair Display ital+bold for display/headlines
-                 DM Sans 400+500 for body copy
-                 Space Grotesk 400+700 for agent code badges
+      Fonts — v2.5 trim preserved:
+        Removed: Playfair Display 400 non-italic, DM Sans 300+600, Space Grotesk 500.
+        Kept:    Playfair Display ital+bold | DM Sans 400+500 | Space Grotesk 400+700.
         Saves ~18 kB of font payload on first load.
     -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -52,43 +71,67 @@
       rel="stylesheet"
     />
 
-    <!-- JSON-LD Structured Data — Organisation + Website -->
+    <!--
+      JSON-LD STRUCTURED DATA — v3.0
+
+      CHANGES FROM v2.9 (Source: content-seo-audit.md section 2.1):
+        REMOVED: email field (hello@neurosparkcorporation.ai retired in v2.7)
+        ADDED:   contactPoint.telephone (+254799644100)
+        ADDED:   contactPoint.areaServed (KE, UG, TZ, RW, BI)
+        ADDED:   contactPoint.availableLanguage (English, Swahili)
+        FIXED:   sameAs handles — all three were wrong:
+                   linkedin.com/company/neurospark-corporation -> linkedin.com/in/oprobandi
+                   twitter.com/neurosparkcorp -> x.com/o_probandi
+                   instagram.com/neurosparkcorporation -> instagram.com/oprobandi
+        ADDED:   GitHub and Facebook sameAs entries
+        ADDED:   founder Person schema
+    -->
     <script type="application/ld+json">
     {
       "@context": "https://schema.org",
       "@graph": [
         {
           "@type": "Organization",
-          "@id": "https://neurosparkcorporation.ai/#organization",
-          "name": "Neurospark Corporation",
-          "url": "https://neurosparkcorporation.ai",
+          "@id":   "https://neurosparkcorporation.ai/#organization",
+          "name":  "Neurospark Corporation",
+          "url":   "https://neurosparkcorporation.ai",
           "logo": {
             "@type": "ImageObject",
-            "url": "https://neurosparkcorporation.ai/logo.jpg"
+            "url":   "https://neurosparkcorporation.ai/logo.jpg"
           },
-          "description": "Autonomous AI agents built for East African founders.",
+          "description": "Autonomous AI agents built for East African founders. We automate operations, manage websites, and grow Google rankings for businesses across Kenya, Uganda, Tanzania, Rwanda, and Burundi.",
           "address": {
-            "@type": "PostalAddress",
+            "@type":           "PostalAddress",
             "addressLocality": "Nairobi",
-            "addressCountry": "KE"
+            "addressCountry":  "KE"
           },
           "contactPoint": {
-            "@type": "ContactPoint",
-            "contactType": "customer service",
-            "email": "hello@neurosparkcorporation.ai",
+            "@type":             "ContactPoint",
+            "contactType":       "sales",
+            "telephone":         "+254799644100",
+            "areaServed":        ["KE", "UG", "TZ", "RW", "BI"],
             "availableLanguage": ["English", "Swahili"]
           },
+          "founder": {
+            "@type":    "Person",
+            "@id":      "https://neurosparkcorporation.ai/#founder",
+            "name":     "Paul Nyang'wara",
+            "jobTitle": "Founder & CEO",
+            "url":      "https://neurosparkcorporation.ai/about"
+          },
           "sameAs": [
-            "https://linkedin.com/company/neurospark-corporation",
-            "https://twitter.com/neurosparkcorp",
-            "https://instagram.com/neurosparkcorporation"
+            "https://linkedin.com/in/oprobandi",
+            "https://x.com/o_probandi",
+            "https://instagram.com/oprobandi",
+            "https://github.com/oprobandi",
+            "https://facebook.com/oprobandi"
           ]
         },
         {
-          "@type": "WebSite",
-          "@id": "https://neurosparkcorporation.ai/#website",
-          "url": "https://neurosparkcorporation.ai",
-          "name": "Neurospark Corporation",
+          "@type":     "WebSite",
+          "@id":       "https://neurosparkcorporation.ai/#website",
+          "url":       "https://neurosparkcorporation.ai",
+          "name":      "Neurospark Corporation",
           "publisher": { "@id": "https://neurosparkcorporation.ai/#organization" }
         }
       ]
@@ -96,7 +139,6 @@
     </script>
 
     <!-- Plausible Analytics — privacy-first, no cookie banner required -->
-    <!-- Replace 'neurosparkcorporation.ai' with actual domain once live -->
     <script defer data-domain="neurosparkcorporation.ai" src="https://plausible.io/js/script.js"></script>
   </head>
   <body>

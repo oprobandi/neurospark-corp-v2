@@ -14,6 +14,7 @@
   --card-bg:  #FFFFFF;
   --sand:     #F5EFE0;
   --navy:     #0A1F44;
+  --gold:     #C9A84C;
 }
 
 :root[data-theme="dark"] {
@@ -27,6 +28,7 @@
   --card-bg:  #0A1F44;
   --sand:     #0d1f3c;
   --navy:     #06132C;
+  --gold:     #C9A84C;
 }
 
 /* ─── Base ──────────────────────────────────────────────────────────────────── */
@@ -42,6 +44,23 @@
     overflow-x: hidden;
     transition: background-color 0.3s ease, color 0.3s ease;
   }
+}
+
+/* ─── Custom scrollbar — v3.0 (borrowed from portfolio) ─────────────────────── */
+/* Applied in dark mode and generally for brand consistency */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: var(--navy); }
+::-webkit-scrollbar-thumb { background: var(--gold); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: #b8943e; }
+
+/* ─── Accessibility: focus-visible for form inputs — v3.0 ───────────────────── */
+/* WCAG 2.1 AA requirement — keyboard users must see active field */
+input:focus-visible,
+textarea:focus-visible,
+select:focus-visible,
+button:focus-visible {
+  outline: 2px solid #C9A84C;
+  outline-offset: 2px;
 }
 
 /* ─── Keyframes ─────────────────────────────────────────────────────────────── */
@@ -77,6 +96,15 @@
   100% { transform: scale(1); }
 }
 
+/* ─── v3.0: Fallback reveal for hidden-anim on slow connections ─────────────── */
+/* If JavaScript hasn't fired IntersectionObserver after 2s (3G), reveal element */
+/* This prevents content being invisible if JS loads slowly (common on Kenyan 3G) */
+@keyframes revealFallback { to { opacity: 1; transform: none; } }
+.hidden-anim {
+  opacity: 0;
+  animation: revealFallback 0s 2s forwards;
+}
+
 /* ─── Animation helpers ─────────────────────────────────────────────────────── */
 .blob         { animation: morphBlob 10s ease-in-out infinite; }
 .wa-pulse     { animation: waPulse 2.5s infinite; }
@@ -91,14 +119,13 @@
 .delay-400 { animation-delay: 0.40s; }
 .delay-500 { animation-delay: 0.50s; }
 
-.hidden-anim { opacity: 0; }
-
 /* ─── Reduced motion ────────────────────────────────────────────────────────── */
 @media (prefers-reduced-motion: reduce) {
   .animate-fade-up,
   .animate-slide-l,
   .animate-slide-r { animation: none !important; opacity: 1 !important; }
   .blob            { animation: none !important; }
+  .hidden-anim     { animation: none !important; opacity: 1 !important; }
 }
 
 /* ─── Nav link underline ────────────────────────────────────────────────────── */
@@ -149,4 +176,21 @@
 .theme-toggle:hover {
   border-color: #C9A84C;
   background: rgba(201,168,76,0.1);
+}
+
+/* ─── HESABU platform badge ─────────────────────────────────────────────────── */
+.early-access-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(201,168,76,0.12);
+  border: 1px solid rgba(201,168,76,0.35);
+  border-radius: 999px;
+  padding: 4px 14px;
+  font-size: 0.78rem;
+  font-family: 'Space Grotesk', sans-serif;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: #C9A84C;
+  text-transform: uppercase;
 }

@@ -1,26 +1,31 @@
 /**
- * App.jsx — Neurospark Corporation  v2.5
+ * App.jsx — Neurospark Corporation  v3.0
  *
- * Changes from v2.4:
- *   • All page imports converted to React.lazy + Suspense (route-level code splitting)
- *   • AGENT_PREVIEWS removed — imported from src/data/agents.js (single source of truth)
- *   • Dark mode toggle added to Navbar (reads/writes via ThemeContext)
- *   • Navbar glassmorphism effect on scroll (backdrop-filter blur)
- *   • Agent preview cards updated to respond to dark/light theme
+ * Changes from v2.9:
+ *   • Nav restructure (UX audit §3):
+ *       NAV_PRIMARY: [Agents, Services, About, Contact]  (was [Home, Agents, Services, Results])
+ *       NAV_MORE:    [Blog, Projects, Results]           (was [About, Blog, Projects, Contact])
+ *     Surfaces highest-conversion pages (About, Contact) in primary nav.
+ *     Moves lower-frequency pages (Blog, Projects) to More dropdown.
+ *   • Added /platforms/hesabu route → HesabuPlatformPage (agent-content-injection.md Track 2)
+ *   • useDocumentTitle import changed to useDocumentMeta (ADR-015)
+ *   • MeetAgents: agent count updated to 13 (WAZO added)
+ *   • HomePage: secondary CTA updated to match new hero
  *
  * Route map:
- *   /               → HomePage
- *   /agents         → AgentsPage
- *   /agents/:slug   → AgentDetailPage
- *   /services       → ServicesPage
- *   /about          → AboutPage
- *   /blog           → BlogPage (list)
- *   /blog/:slug     → BlogPage (single post)
- *   /projects       → ProjectsPage
- *   /contact        → ContactPage
- *   /privacy        → PrivacyPage
- *   /terms          → TermsPage
- *   *               → NotFoundPage
+ *   /                      → HomePage
+ *   /agents                → AgentsPage
+ *   /agents/:slug          → AgentDetailPage
+ *   /platforms/hesabu      → HesabuPlatformPage  (NEW v3.0)
+ *   /services              → ServicesPage
+ *   /about                 → AboutPage
+ *   /blog                  → BlogPage (list)
+ *   /blog/:slug            → BlogPage (single post)
+ *   /projects              → ProjectsPage
+ *   /contact               → ContactPage
+ *   /privacy               → PrivacyPage
+ *   /terms                 → TermsPage
+ *   *                      → NotFoundPage
  */
 
 import { useState, useEffect, lazy, Suspense } from 'react'
@@ -40,24 +45,23 @@ import Wordmark       from './components/ui/Wordmark'
 import { BtnGold, BtnGoldLink } from './components/ui/Buttons'
 import Eyebrow        from './components/ui/Eyebrow'
 import { useInView }  from './hooks/useInView'
-import { useDocumentTitle } from './hooks/useDocumentTitle'
+import { useDocumentMeta } from './hooks/useDocumentMeta'
 import { IMAGES, C, DARK } from './constants'
 import { useTheme }   from './context/ThemeContext'
 import { AGENT_PREVIEWS } from './data/agents'
 
 // ─── Pages (lazy-loaded — each becomes its own JS chunk) ─────────────────────
-// This reduces the initial bundle size significantly.
-// Heavy pages like AgentDetailPage (1,727 lines) are only fetched when visited.
-const AgentsPage      = lazy(() => import('./pages/AgentsPage'))
-const AgentDetailPage = lazy(() => import('./pages/AgentDetailPage'))
-const ServicesPage    = lazy(() => import('./pages/ServicesPage'))
-const AboutPage       = lazy(() => import('./pages/AboutPage'))
-const BlogPage        = lazy(() => import('./pages/BlogPage'))
-const ProjectsPage    = lazy(() => import('./pages/ProjectsPage'))
-const ContactPage     = lazy(() => import('./pages/ContactPage'))
-const PrivacyPage     = lazy(() => import('./pages/PrivacyPage'))
-const TermsPage       = lazy(() => import('./pages/TermsPage'))
-const NotFoundPage    = lazy(() => import('./pages/NotFoundPage'))
+const AgentsPage          = lazy(() => import('./pages/AgentsPage'))
+const AgentDetailPage     = lazy(() => import('./pages/AgentDetailPage'))
+const HesabuPlatformPage  = lazy(() => import('./pages/HesabuPlatformPage'))
+const ServicesPage        = lazy(() => import('./pages/ServicesPage'))
+const AboutPage           = lazy(() => import('./pages/AboutPage'))
+const BlogPage            = lazy(() => import('./pages/BlogPage'))
+const ProjectsPage        = lazy(() => import('./pages/ProjectsPage'))
+const ContactPage         = lazy(() => import('./pages/ContactPage'))
+const PrivacyPage         = lazy(() => import('./pages/PrivacyPage'))
+const TermsPage           = lazy(() => import('./pages/TermsPage'))
+const NotFoundPage        = lazy(() => import('./pages/NotFoundPage'))
 
 // ─── Suspense fallback ────────────────────────────────────────────────────────
 function PageLoader() {
@@ -82,8 +86,6 @@ const FONT_DISPLAY = "'Playfair Display', serif"
 const FONT_BODY    = "'DM Sans', sans-serif"
 
 // ─── useScrollNav ─────────────────────────────────────────────────────────────
-// Smooth-scrolls to a section id if already on /.
-// From any other page: navigates to /?scroll=<id>, HomePage handles the scroll.
 function useScrollNav() {
   const navigate = useNavigate()
   const location = useLocation()
@@ -97,21 +99,19 @@ function useScrollNav() {
   }
 }
 
-// ─── Nav config ──────────────────────────────────────────────────────────────
-// type: 'route'  → react-router Link
-//       'scroll' → useScrollNav (homepage section)
-//       'page'   → <a href> for external
+// ─── Nav config — v3.0 restructure ───────────────────────────────────────────
+// PRIMARY: Agents, Services, About, Contact — highest-conversion pages always visible
+// MORE:    Blog, Projects, Results — lower-frequency / scroll-anchor items
 const NAV_PRIMARY = [
-  { label: 'Home',     type: 'route',  href: '/'         },
   { label: 'Agents',   type: 'route',  href: '/agents'   },
   { label: 'Services', type: 'route',  href: '/services' },
-  { label: 'Results',  type: 'scroll', href: 'results'   },
+  { label: 'About',    type: 'route',  href: '/about'    },
+  { label: 'Contact',  type: 'route',  href: '/contact'  },
 ]
 const NAV_MORE = [
-  { label: 'About',    type: 'route',  href: '/about'    },
   { label: 'Blog',     type: 'route',  href: '/blog'     },
   { label: 'Projects', type: 'route',  href: '/projects' },
-  { label: 'Contact',  type: 'route',  href: '/contact'  },
+  { label: 'Results',  type: 'scroll', href: 'results'   },
 ]
 const NAV_ALL = [...NAV_PRIMARY, ...NAV_MORE]
 
@@ -184,7 +184,6 @@ function Navbar() {
     )
   }
 
-  // Desktop link with underline active indicator
   function desktopLink(l) {
     const active = l.type === 'route' && location.pathname === l.href
     return renderLink(l, 'nav-link ml-7 no-underline text-[0.95rem]', {
@@ -194,16 +193,15 @@ function Navbar() {
     })
   }
 
-  // Mobile overlay link
   function mobileLink(l, i) {
     const active = l.type === 'route' && location.pathname === l.href
     const sharedStyle = {
-      fontFamily: FONT_DISPLAY,
-      fontSize: 'clamp(1.5rem, 5vw, 2.1rem)',
-      color: active ? C.gold : 'white',
-      opacity: menuOpen ? 1 : 0,
-      transition: `opacity 0.4s ease ${i * 0.055}s`,
-      display: 'block', textAlign: 'center', width: '100%', textDecoration: 'none',
+      fontFamily:  FONT_DISPLAY,
+      fontSize:    'clamp(1.5rem, 5vw, 2.1rem)',
+      color:       active ? C.gold : 'white',
+      opacity:     menuOpen ? 1 : 0,
+      transition:  `opacity 0.4s ease ${i * 0.055}s`,
+      display:     'block', textAlign: 'center', width: '100%', textDecoration: 'none',
     }
 
     if (l.type === 'scroll') {
@@ -263,12 +261,21 @@ function Navbar() {
                 >
                   {NAV_MORE.map(l => {
                     const active = l.type === 'route' && location.pathname === l.href
+                    if (l.type === 'scroll') {
+                      return (
+                        <button
+                          key={l.label}
+                          onClick={() => { scrollNav(l.href); setMoreOpen(false) }}
+                          className="w-full text-left bg-transparent border-none cursor-pointer"
+                        >
+                          <span style={{ fontFamily: FONT_BODY, fontSize: '0.9rem', display: 'block', padding: '9px 18px', color: T.text }}>
+                            {l.label}
+                          </span>
+                        </button>
+                      )
+                    }
                     return (
-                      <Link
-                        key={l.href}
-                        to={l.href}
-                        className="no-underline block"
-                      >
+                      <Link key={l.href} to={l.href} className="no-underline block">
                         <span style={{
                           fontFamily: FONT_BODY, fontSize: '0.9rem', display: 'block', padding: '9px 18px',
                           color: active ? C.gold : T.text, fontWeight: active ? 600 : 400,
@@ -292,7 +299,6 @@ function Navbar() {
               {dark ? <Sun size={16} color={C.gold} /> : <Moon size={16} color={C.navy} />}
             </button>
 
-            {/* CTA → /contact */}
             <BtnGoldLink to="/contact" className="ml-4">Let's Talk</BtnGoldLink>
           </div>
 
@@ -311,10 +317,10 @@ function Navbar() {
       <div
         className="fixed inset-0 z-[60] flex flex-col md:hidden"
         style={{
-          background: C.navy,
-          opacity: menuOpen ? 1 : 0,
+          background:    C.navy,
+          opacity:       menuOpen ? 1 : 0,
           pointerEvents: menuOpen ? 'all' : 'none',
-          transition: 'opacity 0.38s ease',
+          transition:    'opacity 0.38s ease',
         }}
       >
         <div className="flex justify-end px-6 pt-5 pb-3">
@@ -343,13 +349,10 @@ function Navbar() {
 }
 
 // ─── Agent preview cards (homepage MeetAgents section) ───────────────────────
-// AGENT_PREVIEWS imported from src/data/agents.js (single source of truth as of v2.5)
-
 function AgentPreviewCard({ code, name, meaning, category, tags, icon, desc, delay, visible }) {
   const [hover, setHover] = useState(false)
   const { dark } = useTheme()
-  const T = dark ? DARK : null
-  const cardBg     = dark ? (hover ? DARK.surfaceHi : DARK.surface) : (hover ? 'white' : 'white')
+  const cardBg     = dark ? (hover ? DARK.surfaceHi : DARK.surface) : 'white'
   const cardBorder = hover ? C.gold : (dark ? DARK.border : C.border)
   const cardTop    = hover ? C.gold : 'transparent'
   const cardShadow = dark
@@ -411,7 +414,7 @@ function MeetAgents() {
             Meet the Agents Running<br />Your Business Behind the Scenes
           </h2>
           <p className={visible ? 'animate-fade-up delay-200' : 'hidden-anim'} style={{ fontFamily: FONT_BODY, color: C.muted, maxWidth: 540, margin: '0 auto', lineHeight: 1.8 }}>
-            12 domain-specific AI agents — each one purpose-built for a specific operational challenge East African businesses face every day.
+            13 domain-specific AI agents — each one purpose-built for a specific operational challenge East African businesses face every day.
           </p>
         </div>
 
@@ -422,16 +425,30 @@ function MeetAgents() {
         </div>
 
         <div className={`${visible ? 'animate-fade-up delay-400' : 'hidden-anim'} flex flex-col sm:flex-row items-center justify-center gap-4`}>
-          <BtnGoldLink to="/agents">Browse All 12 Agents</BtnGoldLink>
+          <BtnGoldLink to="/agents">Browse All 13 Agents</BtnGoldLink>
           <Link to="/contact" className="no-underline flex items-center gap-2" style={{ color: C.muted, fontFamily: FONT_BODY, fontSize: '0.9rem' }}>
             Not sure which fits? <span style={{ color: C.gold, fontWeight: 600 }}>Talk to us →</span>
           </Link>
         </div>
 
-        <div className={`${visible ? 'animate-fade-up delay-500' : 'hidden-anim'} mt-14 rounded-2xl flex flex-wrap justify-around py-7 px-6 gap-6`} style={{ background: C.navy }}>
+        {/* Platform teaser strip — v3.0 */}
+        <div className={`${visible ? 'animate-fade-up delay-500' : 'hidden-anim'} mt-8 rounded-2xl px-6 py-5 flex flex-wrap items-center justify-between gap-4`}
+          style={{ background: C.sand, border: `1px solid ${C.border}` }}>
+          <div>
+            <p style={{ fontFamily: FONT_BODY, fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.12em', color: C.gold, marginBottom: 3 }}>HESABU PLATFORM</p>
+            <p style={{ fontFamily: FONT_DISPLAY, fontWeight: 700, fontSize: '1.05rem', color: C.navy, lineHeight: 1.3 }}>
+              PESA + MALIPO + KODI — orchestrated into one compliance engine
+            </p>
+          </div>
+          <Link to="/platforms/hesabu" className="no-underline flex items-center gap-2 text-[0.85rem] font-semibold" style={{ color: C.gold, fontFamily: FONT_BODY, whiteSpace: 'nowrap' }}>
+            Explore HESABU <ArrowRight size={14} />
+          </Link>
+        </div>
+
+        <div className={`${visible ? 'animate-fade-up delay-500' : 'hidden-anim'} mt-6 rounded-2xl flex flex-wrap justify-around py-7 px-6 gap-6`} style={{ background: C.navy }}>
           {[
-            { num: '12',   label: 'Specialist Agents' },
-            { num: '4',    label: 'Business Domains' },
+            { num: '13',   label: 'Specialist Agents' },
+            { num: '2',    label: 'Multi-Agent Platforms' },
             { num: '24/7', label: 'Always-On Operation' },
             { num: '5',    label: 'East African Countries' },
           ].map(({ num, label }) => (
@@ -447,23 +464,17 @@ function MeetAgents() {
 }
 
 // ─── Home Page ────────────────────────────────────────────────────────────────
-// Reads ?scroll=<sectionId> on mount and smooth-scrolls to that section.
-// This handles cross-page anchor navigation (e.g. clicking "Results" from /blog).
 function HomePage() {
   const [searchParams, setSearchParams] = useSearchParams()
-  useDocumentTitle(null) // base title: "Neurospark Corporation"
+  useDocumentMeta({ title: null }) // base title: "Neurospark Corporation"
 
   useEffect(() => {
     const target = searchParams.get('scroll')
     if (!target) return
-
-    // Small delay lets the page paint before scrolling
     const timer = setTimeout(() => {
       document.getElementById(target)?.scrollIntoView({ behavior: 'smooth' })
-      // Clean up the query param without adding a history entry
       setSearchParams({}, { replace: true })
     }, 80)
-
     return () => clearTimeout(timer)
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -526,18 +537,19 @@ export default function App() {
       <Navbar />
       <Suspense fallback={<PageLoader />}>
         <Routes>
-          <Route path="/"             element={<HomePage />} />
-          <Route path="/agents"       element={<AgentsPage />} />
-          <Route path="/agents/:slug" element={<AgentDetailPage />} />
-          <Route path="/services"     element={<ServicesPage />} />
-          <Route path="/about"        element={<AboutPage />} />
-          <Route path="/blog"         element={<BlogPage />} />
-          <Route path="/blog/:slug"   element={<BlogPage />} />
-          <Route path="/projects"     element={<ProjectsPage />} />
-          <Route path="/contact"      element={<ContactPage />} />
-          <Route path="/privacy"      element={<PrivacyPage />} />
-          <Route path="/terms"        element={<TermsPage />} />
-          <Route path="*"             element={<NotFoundPage />} />
+          <Route path="/"                    element={<HomePage />} />
+          <Route path="/agents"              element={<AgentsPage />} />
+          <Route path="/agents/:slug"        element={<AgentDetailPage />} />
+          <Route path="/platforms/hesabu"    element={<HesabuPlatformPage />} />
+          <Route path="/services"            element={<ServicesPage />} />
+          <Route path="/about"               element={<AboutPage />} />
+          <Route path="/blog"                element={<BlogPage />} />
+          <Route path="/blog/:slug"          element={<BlogPage />} />
+          <Route path="/projects"            element={<ProjectsPage />} />
+          <Route path="/contact"             element={<ContactPage />} />
+          <Route path="/privacy"             element={<PrivacyPage />} />
+          <Route path="/terms"               element={<TermsPage />} />
+          <Route path="*"                    element={<NotFoundPage />} />
         </Routes>
       </Suspense>
       <Footer />

@@ -1,5 +1,10 @@
 /**
- * AgentsPage.jsx — /agents route — v2.7.3
+ * AgentsPage.jsx — /agents route — v3.0
+ *
+ * Changes from v2.7.3:
+ *   • _AGENTS_PLACEHOLDER dead code block removed (was 50 lines, never executed — ADR-009)
+ *   • useDocumentTitle → useDocumentMeta (ADR-015)
+ *   • WAZO (13th agent) now visible in grid automatically via AGENTS_FULL import
  *
  * Changes from v2.5:
  *   • AGENTS array imported from src/data/agents.js (AGENTS_FULL) — ADR-009 consolidation
@@ -14,152 +19,13 @@ import Eyebrow from '../components/ui/Eyebrow'
 import { useInView } from '../hooks/useInView'
 import { C, DARK, FONTS } from '../constants'
 import { useTheme } from '../context/ThemeContext'
-import { useDocumentTitle } from '../hooks/useDocumentTitle'
+import { useDocumentMeta } from '../hooks/useDocumentMeta'
 import { AGENTS_FULL as AGENTS, CATEGORY_META, AGENT_CATEGORIES as CATEGORIES } from '../data/agents'
 
 const FONT_DISPLAY = FONTS.display
 const FONT_BODY    = FONTS.body
 const FONT_MONO    = FONTS.mono
 
-// ─── AGENTS array removed — imported from src/data/agents.js (v2.6) ──────────
-// ─── placeholder to satisfy diff ─────────────────────────────────────────────
-const _AGENTS_PLACEHOLDER = [
-  // ── Finance & Tax ──────────────────────────────────────────────────────────
-  {
-    code:     'PESA',
-    name:     'Mobile Payments Reconciliation',
-    meaning:  'Pesa = Money',
-    category: 'Finance & Tax',
-    icon:     '💳',
-    IconComp: BarChart2,
-    tags:     ['M-Pesa', 'Airtel Money', 'Reconciliation', 'Fintech'],
-    desc:     'Automatically reconciles M-Pesa, Airtel Money, T-Kash and bank transactions. Detects discrepancies, monitors float, and generates audit-ready reports — eliminating hours of manual cross-referencing every week.',
-    slug:     'pesa',
-  },
-  {
-    code:     'KODI',
-    name:     'KRA Tax Compliance',
-    meaning:  'Kodi = Tax',
-    category: 'Finance & Tax',
-    icon:     '📋',
-    IconComp: FileText,
-    tags:     ['KRA', 'iTax', 'VAT', 'PAYE', 'WHT'],
-    desc:     'Monitors your KRA obligations calendar, files VAT, PAYE, and withholding tax returns on schedule, and flags compliance risks before they become penalties. Integrates directly with KRA iTax and eTIMS.',
-    slug:     'kodi',
-  },
-  {
-    code:     'MALIPO',
-    name:     'Kenyan Payroll Compliance',
-    meaning:  'Malipo = Payments',
-    category: 'Finance & Tax',
-    icon:     '💼',
-    IconComp: Briefcase,
-    tags:     ['NSSF', 'SHA', 'Housing Levy', 'PAYE', 'P9'],
-    desc:     'Runs compliant Kenyan payroll end-to-end. Calculates NSSF, SHA/NHIF, and Housing Levy deductions, generates P9 forms, files PAYE via iTax, and dispatches payslips — all without manual intervention.',
-    slug:     'malipo',
-  },
-  {
-    code:     'Mkopo',
-    name:     'SME Lending Eligibility',
-    meaning:  'Mkopo = Loan',
-    category: 'Finance & Tax',
-    icon:     '🏦',
-    IconComp: Shield,
-    tags:     ['Credit', 'Lenders', 'SME Finance', 'CRB'],
-    desc:     'Screens your business against Kenyan lender criteria, identifies your best funding matches, and prepares a loan-readiness dossier. Covers banks, SACCOs, DFIs, and digital lenders active in East Africa.',
-    slug:     'mkopo',
-  },
-  {
-    code:     'DHAMINI',
-    name:     'NSE Investment Research',
-    meaning:  'Dhamini = Security/Guarantee',
-    category: 'Finance & Tax',
-    icon:     '📈',
-    IconComp: BarChart2,
-    tags:     ['NSE', 'EAC Capital Markets', 'Equities', 'Research'],
-    desc:     'Delivers daily equity research briefs on Nairobi Securities Exchange listed companies. Monitors price movements, dividend announcements, and analyst consensus for East African capital market participants.',
-    slug:     'dhamini',
-  },
-
-  // ── Trade & Compliance ─────────────────────────────────────────────────────
-  {
-    code:     'BIASHARA',
-    name:     'East African Trade Compliance',
-    meaning:  'Biashara = Business/Trade',
-    category: 'Trade & Compliance',
-    icon:     '🌍',
-    IconComp: Globe,
-    tags:     ['EAC', 'Customs', 'Tariffs', 'Cross-Border'],
-    desc:     'Navigates EAC cross-border trade regulations, classifies goods under EAC tariff schedules, prepares customs documentation, and alerts you to regulatory changes across Kenya, Uganda, Tanzania, Rwanda and Burundi.',
-    slug:     'biashara',
-  },
-  {
-    code:     'Bidhaa',
-    name:     'Export Market Intelligence',
-    meaning:  'Bidhaa = Goods/Products',
-    category: 'Trade & Compliance',
-    icon:     '📦',
-    IconComp: Package,
-    tags:     ['Export', 'Market Access', 'Standards', 'KEBS'],
-    desc:     'Identifies export market opportunities, maps compliance requirements for KEBS, KEPHIS, and destination-market standards, and produces export-readiness assessments for Kenyan manufacturers and agribusinesses.',
-    slug:     'bidhaa',
-  },
-  {
-    code:     'Soko',
-    name:     'Government Tender & Procurement',
-    meaning:  'Soko = Market/Marketplace',
-    category: 'Trade & Compliance',
-    icon:     '🏛️',
-    IconComp: Building2,
-    tags:     ['PPADA', 'Tenders', 'Procurement', 'Government'],
-    desc:     'Tracks open government tenders across Kenya\'s national and county procurement portals, evaluates bid eligibility, and prepares PPADA-compliant submission packages — so you never miss a contract opportunity.',
-    slug:     'soko',
-  },
-  {
-    code:     'Ruhusa',
-    name:     'County Business Licensing',
-    meaning:  'Ruhusa = Permit/Permission',
-    category: 'Trade & Compliance',
-    icon:     '📜',
-    IconComp: Lock,
-    tags:     ['County', 'Licenses', 'By-Laws', 'Permits'],
-    desc:     'Maps the licensing requirements for your business across all 47 Kenyan counties, tracks renewal deadlines, and prepares permit applications aligned to county by-laws — eliminating compliance surprises.',
-    slug:     'ruhusa',
-  },
-
-  // ── Sector Intelligence ────────────────────────────────────────────────────
-  {
-    code:     'SHAMBA',
-    name:     'Agriculture Supply Chain',
-    meaning:  'Shamba = Farm/Field',
-    category: 'Sector Intelligence',
-    icon:     '🌾',
-    IconComp: Leaf,
-    tags:     ['Agri', 'EAGC', 'KMD', 'KEPHIS', 'Commodity Prices'],
-    desc:     'Tracks commodity prices across major Kenyan markets (EAGC, NCE), monitors KMD weather forecasts for planting decisions, flags KEPHIS phytosanitary alerts, and optimises agri-logistics routing for smallholders and aggregators.',
-    slug:     'shamba',
-  },
-  {
-    code:     'Ardhi',
-    name:     'Kenya Real Estate Intelligence',
-    meaning:  'Ardhi = Land/Earth',
-    category: 'Sector Intelligence',
-    icon:     '🏠',
-    IconComp: Building2,
-    tags:     ['Real Estate', 'Valuation', 'Nairobi', 'Planning'],
-    desc:     'Delivers real-time Kenyan property market data, automated valuations for residential and commercial units, planning compliance checks, and investment opportunity alerts across Nairobi, Mombasa, and major upcountry markets.',
-    slug:     'ardhi',
-  },
-
-  // ── Customer Experience ────────────────────────────────────────────────────
-  {
-    code:     'ZURI',
-    name:     'Swahili Customer Service',
-    meaning:  'Zuri = Good / Beautiful',
-    category: 'Customer Experience',
-    icon:     '🤝',
-    IconComp: MessageCircle,
-] // _AGENTS_PLACEHOLDER ends — real data imported from src/data/agents.js
 
 // ─── Dot grid background (hero) ───────────────────────────────────────────────
 function DotGrid() {
@@ -737,7 +603,7 @@ function CalloutBanner() {
 
 // ─── AgentsPage Root ──────────────────────────────────────────────────────────
 export default function AgentsPage() {
-  useDocumentTitle('Our AI Agents')
+  useDocumentMeta({ title: 'Our 13 Agents', description: '13 autonomous AI agents built for Kenyan and East African businesses — finance, tax, trade, and customer experience.', canonical: 'https://neurosparkcorporation.ai/agents' })
   const [activeCategory, setActiveCategory] = useState('All')
   const [search,         setSearch]         = useState('')
   const gridRef   = useRef(null)

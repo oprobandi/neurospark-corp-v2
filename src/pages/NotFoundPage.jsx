@@ -8,7 +8,7 @@
 
 import { Link } from 'react-router-dom'
 import { ArrowRight, Home } from 'lucide-react'
-import { useDocumentTitle } from '../hooks/useDocumentTitle'
+import { useDocumentTitle } from '../hooks/useDocumentMeta'
 import { useTheme } from '../context/ThemeContext'
 import { C, DARK, FONTS } from '../constants'
 

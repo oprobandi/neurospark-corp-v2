@@ -1,14 +1,10 @@
-import { useEffect } from 'react'
-
-const BASE = 'Neurospark Corporation'
-
 /**
- * Sets document.title to "<title> | Neurospark Corporation".
- * Pass null or undefined to use the base title alone.
+ * useDocumentTitle.js — v3.0
+ *
+ * DEPRECATED: This file is kept for backward compatibility only.
+ * New code should import from useDocumentMeta.js instead:
+ *   import { useDocumentMeta } from './useDocumentMeta'
+ *
+ * All hooks from this file are re-exported from useDocumentMeta.js.
  */
-export function useDocumentTitle(title) {
-  useEffect(() => {
-    document.title = title ? `${title} | ${BASE}` : BASE
-    return () => { document.title = BASE }
-  }, [title])
-}
+export { useDocumentTitle, useDocumentMeta } from './useDocumentMeta'

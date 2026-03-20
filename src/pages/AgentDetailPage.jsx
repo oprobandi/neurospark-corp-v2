@@ -1,5 +1,5 @@
 /**
- * AgentDetailPage.jsx — /agents/:slug
+ * AgentDetailPage.jsx — /agents/:slug — v3.0
  *
  * Place at: src/pages/AgentDetailPage.jsx
  *
@@ -24,7 +24,8 @@ import { useState, useEffect } from 'react'
 import { useParams, Link, useNavigate } from 'react-router-dom'
 import { C, DARK, FONTS } from '../constants'
 import { useTheme } from '../context/ThemeContext'
-import { useDocumentTitle } from '../hooks/useDocumentTitle'
+import { useDocumentMeta, useDocumentTitle } from '../hooks/useDocumentMeta'
+import { HESABU_PESA_FAQS, HESABU_MALIPO_FAQS, HESABU_KODI_FAQS } from '../data/agents'
 // ─── Font aliases (sourced from constants.js) ─────────────────────────────────
 const FONT_DISPLAY = FONTS.display
 const FONT_BODY    = FONTS.body
@@ -129,6 +130,8 @@ const AGENTS = {
       { q: 'Can PESA reconcile multiple branches separately?',   a: 'Yes. PESA supports multi-location setups, producing both per-branch and consolidated reports in the same daily run.' },
       { q: 'What happens if a platform API goes down overnight?', a: 'PESA queues the reconciliation and processes it as soon as the API recovers, flagging the delay in the report. You\'re never left with a silent failure.' },
     ],
+    // v3.0: HESABU-orchestration FAQs appended (agent-content-injection.md Track 1B)
+    hesabuFaqs: HESABU_PESA_FAQS,
   },
 
   kodi: {
@@ -217,6 +220,7 @@ const AGENTS = {
       { q: 'Does KODI connect to my accounting software?',          a: 'KODI integrates with QuickBooks, Xero, and Sage to pull figures for return preparation. For other systems, a structured CSV upload is available.' },
       { q: 'Is my KRA login credential stored by KODI?',            a: 'No. KODI uses a read-only API integration where available, and iTax agent credentials for preparation only. Submission requires your own login — KODI cannot and does not store your iTax password.' },
     ],
+    hesabuFaqs: HESABU_KODI_FAQS,
   },
 
   malipo: {
@@ -487,6 +491,7 @@ const AGENTS = {
       { q: 'How current is the data in DHAMINI\'s brief?',           a: 'The morning brief is generated from NSE closing data and overnight announcements — typically compiled by 02:00 EAT and delivered by 07:00 EAT each trading day.' },
       { q: 'Is DHAMINI suitable for stockbrokers and fund managers?', a: 'Yes. DHAMINI offers a professional tier with raw data exports, API access, and custom screening models suited to institutional workflows.' },
     ],
+    hesabuFaqs: HESABU_MALIPO_FAQS,
   },
 
   biashara: {
@@ -1713,7 +1718,7 @@ export default function AgentDetailPage() {
 
   const agent = AGENTS[slug]
 
-  useDocumentTitle(agent ? agent.name : 'Agent Detail')
+  useDocumentMeta({ title: agent ? agent.name : 'Agent Detail', description: agent ? agent.tagline : undefined })
 
   // 404 fallback — redirect to /agents
   useEffect(() => {
@@ -1734,8 +1739,104 @@ export default function AgentDetailPage() {
       <AgentWorkflow     steps={agent.workflow} />
       <UseCases          cases={agent.useCases} />
       <SampleOutput      lines={agent.sampleOutput} code={agent.code} />
-      <FAQ               faq={agent.faq} />
+      <FAQ               faq={[...(agent.faq || []), ...(agent.hesabuFaqs || [])]} />
       <DeploymentCTA     agent={agent} />
     </>
   )
+
+  // ─── v3.0: WAZO — 13th agent ──────────────────────────────────────────────
+  wazo: {
+    code:     'WAZO',
+    name:     'Startup Idea Validation',
+    meaning:  'Wazo = Idea / Thought',
+    tagline:  'Find out if your idea is worth building — before you build it.',
+    category: 'Sector Intelligence',
+    icon:     '💡',
+    chips:    ['East Africa Grounded', 'Market-Honest', 'Pre-Product Stage'],
+    terminalLines: [
+      '> WAZO Validation Run — Idea: "Last-mile logistics platform"',
+      '> Phase 1: Problem Validation',
+      '  ✓ Problem confirmed in 3 customer segments',
+      '  ⚠  72% currently using motorcycle boda networks',
+      '  ⚠  Price sensitivity: KES 150 ceiling, not KES 300',
+      '> Phase 2: Market Sizing',
+      '  TAM:  KES 47B — Nairobi last-mile, 2024',
+      '  SAM:  KES 3.8B — B2B e-commerce segment',
+      '  SOM:  KES 190M — realistic 5% capture, Y3',
+      '> Phase 3: Competitive Landscape',
+      '  Active competitors: 4 identified',
+      '  ⚠  Sendy operating in this exact segment',
+      '  ✓  Your moat: county-level coverage (uncontested)',
+      '> Validation Score: 6.2/10 — CONDITIONAL GO',
+      '> Next step: 15 B2B customer interviews required',
+    ],
+    problem: {
+      headline: 'Most Kenyan startups fail not because of poor execution — but because the idea was never properly tested.',
+      body: [
+        'East Africa\'s startup ecosystem has real money flowing in and real founders building — but the pattern of failure is consistent: businesses built on assumptions rather than evidence. A founder spends six months developing a platform and raises a seed round before discovering that the target customer cannot afford the product, or that an incumbent already owns 80% of the market, or that a critical regulatory barrier makes the business model illegal in three of the five target counties.',
+        'Standard startup frameworks — TAM/SAM/SOM, Jobs-to-Be-Done, Business Model Canvas — were designed for Silicon Valley markets. Applied uncritically to Kenya, they produce dangerously optimistic projections. Airbnb analogies don\'t account for trust dynamics in the Kenyan rental market. Uber comparisons ignore the boda-boda and matatu ecosystems that already solve last-mile at a price point no VC-funded startup can match without subsidies.',
+        'WAZO runs the hard questions before you spend a shilling on development. It stress-tests your market sizing against Kenyan economic realities, identifies your actual competitors (not just the ones on Crunchbase), maps the regulatory environment across Kenya\'s 47 counties and the EAC region, and produces a conditional validation — not a yes or no, but a specific set of assumptions to test before the next major investment decision.',
+      ],
+    },
+    capabilities: [
+      { icon: '🔬', title: 'Problem-Market Fit Analysis',   desc: 'Validates whether the problem you\'re solving exists at the scale you assume — with East African customer behaviour data, not US or European proxies.' },
+      { icon: '📐', title: 'Kenya-Calibrated Market Sizing', desc: 'Builds TAM/SAM/SOM from Kenyan GDP, sector data, KNBS statistics, and county-level purchasing power — not analogised from global figures.' },
+      { icon: '⚔️', title: 'Competitive Intelligence',       desc: 'Maps direct and indirect competitors including informal sector players — motorcycle couriers, M-Pesa agents, open-air markets — that formal frameworks miss.' },
+      { icon: '⚖️', title: 'Regulatory Risk Assessment',    desc: 'Identifies applicable regulatory frameworks across Kenya\'s national, county, and sector-specific regulators before any product architecture is committed.' },
+      { icon: '💰', title: 'Unit Economics Modelling',      desc: 'Builds honest unit economics at Kenyan price sensitivity thresholds — where KES 200 vs KES 300 price points can swing market penetration by 40%.' },
+      { icon: '🗺️', title: 'Go-to-Market Path Design',     desc: 'Identifies which customer segment, geography, and channel to prove first — with a sequenced GTM that builds from evidence, not ambition.' },
+    ],
+    tools: ['KNBS Statistical Releases', 'KRA Business Registry', 'Kenya Companies Registry', 'County Revenue Portals', 'East African Venture Capital Association Data', 'Crunchbase (EAC filter)', 'Google Trends Kenya', 'GSMA Mobile Intelligence'],
+    workflow: [
+      { step: 1, title: 'Idea Intake',          desc: 'Structured diagnostic capturing the idea, target problem, geography, and founder\'s stage — in a single message, not a 30-minute questionnaire.' },
+      { step: 2, title: 'Problem Validation',   desc: 'Evidence-first assessment of whether the problem is real, frequent, painful, and currently being solved (however imperfectly) by target customers.' },
+      { step: 3, title: 'Market Sizing',        desc: 'Kenya-calibrated TAM/SAM/SOM built from KNBS data, sector reports, and purchasing power realities — with explicit assumptions stated for each figure.' },
+      { step: 4, title: 'Competitive Mapping',  desc: 'Full competitor identification including informal sector incumbents, international players with Kenya operations, and adjacent solutions that erode the market.' },
+      { step: 5, title: 'Regulatory Scan',      desc: 'Maps licensing, compliance, and operational restrictions across relevant national regulators and county governments before product commitments are made.' },
+      { step: 6, title: 'Conditional Verdict',  desc: 'A scored validation output with explicit go/conditional-go/kill recommendation and a specific list of evidence to gather before the next major decision.' },
+    ],
+    useCases: [
+      {
+        persona: 'Pre-Seed Founder — Nairobi',
+        problem: 'A founder with a working prototype but no external funding needed to pressure-test market size assumptions before approaching angel investors. The founding team had used Silicon Valley analogies to build their TAM — a number that any Kenyan investor would challenge immediately.',
+        outcome: 'WAZO rebuilt the market sizing from KNBS data and County government revenue statistics. The revised SAM was 60% smaller than the original — but the founder walked into investor meetings with a number they could defend, and closed their round in seven weeks.',
+      },
+      {
+        persona: 'Pivot Decision — 12-Month-Old Startup',
+        problem: 'A fintech startup with flat growth for six months was considering three pivot directions. The founding team had strong opinions about which segment to pursue but no structured evidence for any of them.',
+        outcome: 'WAZO stress-tested all three pivots against market data. One direction had a fatal regulatory barrier that would have taken 18 months to resolve. The second had an entrenched competitor with 70% market share. The third had a clear entry path with an underserved segment. The team pivoted to the third and hit product-market fit within two quarters.',
+      },
+    ],
+    sampleOutput: [
+      '┌──────────────────────────────────────────────────────┐',
+      '│  WAZO VALIDATION REPORT — "Last-Mile Logistics"      │',
+      '│  Scope: Nairobi Metro + Mombasa  |  B2B Focus        │',
+      '├──────────────────────────────────────────────────────┤',
+      '│  VALIDATION SCORE: 6.2 / 10  → CONDITIONAL GO        │',
+      '├──────────────────────────────────────────────────────┤',
+      '│  MARKET                                              │',
+      '│  TAM:  KES 47B (Nairobi last-mile logistics, 2024)   │',
+      '│  SAM:  KES 3.8B (B2B e-commerce, formal sector)      │',
+      '│  SOM:  KES 190M (5% realistic capture by Y3)         │',
+      '├──────────────────────────────────────────────────────┤',
+      '│  COMPETITION                                         │',
+      '│  Sendy        — Direct, Series B, 40% market share   │',
+      '│  Boda networks — Indirect, 72% of current volume     │',
+      '│  Your moat:   County coverage beyond Nairobi (gap)   │',
+      '├──────────────────────────────────────────────────────┤',
+      '│  CONDITIONS FOR GO                                   │',
+      '│  1. Confirm price ceiling via 15 B2B interviews      │',
+      '│  2. Verify county licensing in 5 target counties     │',
+      '│  3. Secure 1 pilot customer before tech investment   │',
+      '└──────────────────────────────────────────────────────┘',
+    ],
+    faq: [
+      { q: 'Is WAZO only for tech startups?',                     a: 'No. WAZO validates ideas across sectors — agribusiness, fintech, logistics, healthcare, education, retail, and services. The frameworks apply to any idea that requires investment before revenue.' },
+      { q: 'Does WAZO give a binary yes/no on ideas?',            a: 'Rarely. Most ideas are directionally interesting but incorrectly sized, mis-targeted, or prematurely timed. WAZO delivers a conditional validation: viable if specific assumption X can be confirmed, with exactly how to test it.' },
+      { q: 'What if WAZO finds a fatal flaw in my idea?',         a: 'That is the most valuable outcome. A killed idea before development saves the capital, time, and opportunity cost of building the wrong thing. WAZO will not soften a fatal flaw into a challenge to monitor.' },
+      { q: 'Does WAZO cover Uganda, Tanzania, and Rwanda too?',   a: 'Yes. WAZO covers the full EAC region with country-specific regulatory, market, and competitive context for Kenya, Uganda, Tanzania, Rwanda, and Burundi.' },
+      { q: 'How is WAZO different from a consultant\'s market report?', a: 'WAZO is interactive, faster, and cheaper — and it pushes back. A consultant produces the report you commissioned. WAZO maintains negative findings under pressure and asks the questions a paid consultant might avoid.' },
+      { q: 'Can WAZO help with fundraising materials?',           a: 'WAZO produces the evidence base — validated market sizing, competitive maps, regulatory risk assessment. You use this to build investor materials. WAZO does not write pitch decks.' },
+    ],
+  },
 }

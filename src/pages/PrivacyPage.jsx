@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom'
-import { useDocumentTitle } from '../hooks/useDocumentTitle'
+import { useDocumentTitle } from '../hooks/useDocumentMeta'
 import { C, DARK, FONTS } from '../constants'
 import { useTheme } from '../context/ThemeContext'
 

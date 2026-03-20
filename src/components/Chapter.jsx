@@ -1,3 +1,16 @@
+/**
+ * Chapter.jsx — v3.0
+ *
+ * Changes from v2.x:
+ *   • gridTemplateColumns minmax: 300px → 350px
+ *     Fixes visual order mismatch at 600–768px: with 300px min, 2 cols appear
+ *     at 600px but md:order-1/2 Tailwind classes only kick in at 768px,
+ *     causing image/text swap to be inverted at the 600–768px breakpoint.
+ *     350px min means 2 cols only appear at 700px+, much closer to md: (768px).
+ *     (UX audit §2.5)
+ *   • Chapter images have explicit width/height for CLS prevention (SEO audit §2.5)
+ */
+
 import { useInView } from '../hooks/useInView'
 import Eyebrow from './ui/Eyebrow'
 
@@ -9,7 +22,7 @@ export default function Chapter({ reverse = false, bg = '#FAFAF7', eyebrow, head
       <div className="max-w-[1100px] mx-auto px-6">
         <div
           className="grid gap-16 items-center"
-          style={{ gridTemplateColumns: 'repeat(auto-fit,minmax(300px,1fr))' }}
+          style={{ gridTemplateColumns: 'repeat(auto-fit,minmax(350px,1fr))' }}
         >
           {/* Visual — conditionally ordered */}
           <div
@@ -19,7 +32,15 @@ export default function Chapter({ reverse = false, bg = '#FAFAF7', eyebrow, head
               className="rounded-[20px] overflow-hidden"
               style={{ aspectRatio: '4/3', background: '#F5EFE0', boxShadow: 'inset 0 2px 20px rgba(10,31,68,0.06)' }}
             >
-              <img src={img} alt={imgAlt} loading="lazy" className="w-full h-full object-cover block" />
+              {/* v3.0: explicit width/height for CLS prevention */}
+              <img
+                src={img}
+                alt={imgAlt}
+                width={600}
+                height={450}
+                loading="lazy"
+                className="w-full h-full object-cover block"
+              />
             </div>
           </div>
 

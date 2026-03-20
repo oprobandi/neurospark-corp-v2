@@ -1,20 +1,49 @@
 <?xml version="1.0" encoding="UTF-8"?>
+<!--
+  sitemap.xml — v3.0
+  Updated: 2026-03-12
+
+  Changes from v2.9:
+    • /platforms/hesabu added (HESABU Platform page — new v3.0 route)
+    • All 13 agent detail pages listed (was 6 — incomplete in v2.9)
+    • /agents/wazo added (13th agent)
+    • lastmod dates added to high-priority pages
+    • Priority values reviewed and adjusted
+-->
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
 
-  <!-- Core pages -->
+  <!-- ── Core pages ────────────────────────────────────────────────────────── -->
   <url>
     <loc>https://neurosparkcorporation.ai/</loc>
+    <lastmod>2026-03-12</lastmod>
     <changefreq>weekly</changefreq>
     <priority>1.0</priority>
   </url>
   <url>
     <loc>https://neurosparkcorporation.ai/agents</loc>
+    <lastmod>2026-03-12</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.9</priority>
+  </url>
+  <url>
+    <loc>https://neurosparkcorporation.ai/platforms/hesabu</loc>
+    <lastmod>2026-03-12</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.9</priority>
   </url>
   <url>
     <loc>https://neurosparkcorporation.ai/services</loc>
     <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://neurosparkcorporation.ai/blog</loc>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://neurosparkcorporation.ai/contact</loc>
+    <changefreq>yearly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
@@ -27,35 +56,47 @@
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
-  <url>
-    <loc>https://neurosparkcorporation.ai/blog</loc>
-    <changefreq>weekly</changefreq>
-    <priority>0.8</priority>
-  </url>
-  <url>
-    <loc>https://neurosparkcorporation.ai/contact</loc>
-    <changefreq>yearly</changefreq>
-    <priority>0.8</priority>
-  </url>
 
-  <!-- Agent detail pages -->
+  <!-- ── Agent detail pages — all 13 ─────────────────────────────────────── -->
+  <!-- Finance & Tax -->
   <url>
     <loc>https://neurosparkcorporation.ai/agents/pesa</loc>
+    <lastmod>2026-03-12</lastmod>
     <changefreq>monthly</changefreq>
-    <priority>0.7</priority>
-  </url>
-  <url>
-    <loc>https://neurosparkcorporation.ai/agents/kodi</loc>
-    <changefreq>monthly</changefreq>
-    <priority>0.7</priority>
+    <priority>0.8</priority>
   </url>
   <url>
     <loc>https://neurosparkcorporation.ai/agents/malipo</loc>
+    <lastmod>2026-03-12</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://neurosparkcorporation.ai/agents/kodi</loc>
+    <lastmod>2026-03-12</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://neurosparkcorporation.ai/agents/mkopo</loc>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
+    <loc>https://neurosparkcorporation.ai/agents/dhamini</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <!-- Trade & Compliance -->
+  <url>
     <loc>https://neurosparkcorporation.ai/agents/biashara</loc>
+    <lastmod>2026-03-12</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://neurosparkcorporation.ai/agents/bidhaa</loc>
+    <lastmod>2026-03-12</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
@@ -65,12 +106,37 @@
     <priority>0.7</priority>
   </url>
   <url>
+    <loc>https://neurosparkcorporation.ai/agents/ruhusa</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <!-- Sector Intelligence -->
+  <url>
+    <loc>https://neurosparkcorporation.ai/agents/shamba</loc>
+    <lastmod>2026-03-12</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://neurosparkcorporation.ai/agents/ardhi</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <!-- Customer Experience -->
+  <url>
     <loc>https://neurosparkcorporation.ai/agents/zuri</loc>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
+  <!-- New v3.0 -->
+  <url>
+    <loc>https://neurosparkcorporation.ai/agents/wazo</loc>
+    <lastmod>2026-03-12</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
 
-  <!-- Legal -->
+  <!-- ── Legal ─────────────────────────────────────────────────────────────── -->
   <url>
     <loc>https://neurosparkcorporation.ai/privacy</loc>
     <changefreq>yearly</changefreq>

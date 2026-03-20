@@ -42,7 +42,7 @@ const FORMSPREE_URL = `https://formspree.io/f/${FORMSPREE_ID}`
 import { useInView } from '../hooks/useInView'
 import { C, DARK, FONTS } from '../constants'
 import { useTheme } from '../context/ThemeContext'
-import { useDocumentTitle } from '../hooks/useDocumentTitle'
+import { useDocumentTitle } from '../hooks/useDocumentMeta'
 // ─── Font aliases (sourced from constants.js) ─────────────────────────────────
 const FD = FONTS.display
 const FB = FONTS.body

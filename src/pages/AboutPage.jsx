@@ -21,11 +21,11 @@
 
 import { useState, useEffect, useRef } from 'react'
 import { Link } from 'react-router-dom'
-import { MapPin, Linkedin, Github, Twitter, CheckCircle, ArrowRight, Zap, Globe, Shield, MessageCircle } from 'lucide-react'
+import { MapPin, Linkedin, Github, CheckCircle, ArrowRight, Zap, Globe, Shield, MessageCircle } from 'lucide-react'
 import { useInView } from '../hooks/useInView'
 import { C, DARK, FONTS, IMAGES } from '../constants'
 import { useTheme } from '../context/ThemeContext'
-import { useDocumentTitle } from '../hooks/useDocumentTitle'
+import { useDocumentMeta } from '../hooks/useDocumentMeta'
 // ─── Font aliases (sourced from constants.js) ─────────────────────────────────
 const FD = FONTS.display
 const FB = FONTS.body
@@ -277,9 +277,9 @@ function FounderSection() {
               {/* Social icons */}
               <div className="flex justify-center gap-3">
                 {[
-                  { Icon: Linkedin, href: 'https://linkedin.com/in/neurospark-founder', label: 'LinkedIn' },
-                  { Icon: Twitter,  href: 'https://twitter.com/neurosparkcorp',          label: 'Twitter / X' },
-                  { Icon: Github,   href: 'https://github.com/neurospark',               label: 'GitHub' },
+                  { Icon: Linkedin, href: 'https://linkedin.com/in/oprobandi', label: 'LinkedIn' },
+                  { Icon: () => <svg width='16' height='16' viewBox='0 0 24 24' fill='currentColor'><path d='M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-4.714-6.231-5.401 6.231H2.744l7.73-8.835L1.254 2.25H8.08l4.253 5.622zm-1.161 17.52h1.833L7.084 4.126H5.117z'/></svg>, href: 'https://x.com/o_probandi', label: 'X / Twitter' },
+                  { Icon: Github,   href: 'https://github.com/oprobandi',               label: 'GitHub' },
                 ].map(({ Icon, href, label }) => {
                   const [hover, setHover] = useState(false)
                   return (
@@ -615,7 +615,7 @@ function ContactCTA() {
 // ─── AboutPage Root ─────────────────────────────────────────────────────────
 export default function AboutPage() {
   const { dark } = useTheme()
-  useDocumentTitle('About Us')
+  useDocumentMeta({ title: 'About Us', description: 'Meet Paul Nyang\'wara, Founder & CEO of Neurospark Corporation. Learn about our mission to build AI agents for East African businesses.', canonical: 'https://neurosparkcorporation.ai/about' })
   useEffect(() => { window.scrollTo(0, 0) }, [])
 
   return (
