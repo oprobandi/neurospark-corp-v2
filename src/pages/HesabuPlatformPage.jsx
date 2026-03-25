@@ -34,6 +34,7 @@ import { useInView } from '../hooks/useInView'
 import { C, DARK, FONTS } from '../constants'
 import { useTheme } from '../context/ThemeContext'
 import { useDocumentMeta } from '../hooks/useDocumentMeta'
+import { useScrollTop } from '../hooks/useScrollTop'
 import Breadcrumb from '../components/Breadcrumb'
 
 const FD = FONTS.display
@@ -516,6 +517,7 @@ function DeploymentCTA() {
 
 // ─── HesabuPlatformPage Root ──────────────────────────────────────────────────
 export default function HesabuPlatformPage() {
+  useScrollTop() // BUG-04: was missing scroll-to-top on mount
   useDocumentMeta({
     title:       'HESABU Compliance Platform',
     description: 'Multi-agent Kenyan compliance platform combining PESA, MALIPO, and KODI under one orchestrator with live regulatory monitoring and immutable audit trails.',

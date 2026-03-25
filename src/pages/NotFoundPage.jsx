@@ -8,7 +8,8 @@
 
 import { Link } from 'react-router-dom'
 import { ArrowRight, Home } from 'lucide-react'
-import { useDocumentTitle } from '../hooks/useDocumentMeta'
+import { useDocumentMeta } from '../hooks/useDocumentMeta'
+import { useScrollTop } from '../hooks/useScrollTop'
 import { useTheme } from '../context/ThemeContext'
 import { C, DARK, FONTS } from '../constants'
 
@@ -22,7 +23,8 @@ const SUGGESTED = [
 ]
 
 export default function NotFoundPage() {
-  useDocumentTitle('Page Not Found')
+  useScrollTop() // BUG-04: was missing scroll-to-top on mount
+  useDocumentMeta({ title: 'Page Not Found', canonical: 'https://neurosparkcorporation.ai/404' })
   const { dark } = useTheme()
 
   return (

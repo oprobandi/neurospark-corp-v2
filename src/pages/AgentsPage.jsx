@@ -1,10 +1,8 @@
 /**
- * AgentsPage.jsx — /agents route — v3.0
+ * AgentsPage.jsx — /agents route — v3.1
  *
- * Changes from v2.7.3:
- *   • _AGENTS_PLACEHOLDER dead code block removed (was 50 lines, never executed — ADR-009)
- *   • useDocumentTitle → useDocumentMeta (ADR-015)
- *   • WAZO (13th agent) now visible in grid automatically via AGENTS_FULL import
+ * Changes from v3.0:
+ *   • BUG-04: useScrollTop() added — page was missing scroll-to-top on mount.
  *
  * Changes from v2.5:
  *   • AGENTS array imported from src/data/agents.js (AGENTS_FULL) — ADR-009 consolidation
@@ -20,6 +18,7 @@ import { useInView } from '../hooks/useInView'
 import { C, DARK, FONTS } from '../constants'
 import { useTheme } from '../context/ThemeContext'
 import { useDocumentMeta } from '../hooks/useDocumentMeta'
+import { useScrollTop } from '../hooks/useScrollTop'
 import { AGENTS_FULL as AGENTS, CATEGORY_META, AGENT_CATEGORIES as CATEGORIES } from '../data/agents'
 
 const FONT_DISPLAY = FONTS.display
@@ -603,6 +602,7 @@ function CalloutBanner() {
 
 // ─── AgentsPage Root ──────────────────────────────────────────────────────────
 export default function AgentsPage() {
+  useScrollTop() // BUG-04: was missing scroll-to-top on mount
   useDocumentMeta({ title: 'Our 13 Agents', description: '13 autonomous AI agents built for Kenyan and East African businesses — finance, tax, trade, and customer experience.', canonical: 'https://neurosparkcorporation.ai/agents' })
   const [activeCategory, setActiveCategory] = useState('All')
   const [search,         setSearch]         = useState('')

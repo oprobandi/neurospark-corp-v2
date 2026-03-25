@@ -19,7 +19,7 @@ export default function WhatsAppWidget() {
       <a
         href={`https://wa.me/${import.meta.env.VITE_WHATSAPP_NUMBER ?? '254799644100'}?text=Hi%20Neurospark%20Corporation%21%20I%27d%20like%20to%20learn%20more%20about%20your%20AI%20agents.`}
         target="_blank"
-        rel="noreferrer"
+        rel="noopener noreferrer"
         aria-label="WhatsApp — Neurospark Corporation"
         className="wa-pulse"
         onMouseEnter={() => setHover(true)}

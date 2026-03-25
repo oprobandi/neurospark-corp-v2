@@ -1,25 +1,28 @@
 /**
- * ContactPage.jsx — v2.7
+ * ContactPage.jsx — v3.1
  *
- * Changes:
- *   • Form submissions wired to Formspree (POST to FORMSPREE_ID endpoint)
- *   • Removed hello@neurosparkcorporation.ai — contact email is now pnyangwara@gmail.com
- *   • InfoPanel socials updated: Instagram, LinkedIn, X (SVG), GitHub, Facebook — /oprobandi handles
- *   • Removed Twitter import; added Github, Facebook from lucide
- *   • handleFormSubmit now POSTs to Formspree for email pref; WhatsApp pref unchanged
+ * Changes from v2.7:
+ *   • BUG-01: useState was called inside SOCIAL.map() callback in InfoPanel —
+ *     a Rules of Hooks violation. Extracted into standalone <SocialIcon>
+ *     component so useState is called at component top level.
+ *   • SEC-03: Personal Gmail address removed from user-facing error message
+ *     and from all code comments. WhatsApp is now the sole fallback.
+ *   • SEC-04: Formspree ID moved from hardcoded string to VITE_FORMSPREE_ID
+ *     env var. Hidden _gotcha honeypot field added for basic bot filtering.
+ *     (reCAPTCHA enabled in Formspree dashboard — no code change needed.)
+ *   • SEC-05: rel="noreferrer" → rel="noopener noreferrer" on social links.
+ *   • BUG-03: WAZO — Startup Idea Validation added to agent selector dropdown.
+ *   • BUG-05: Form validation replaced — no more alert(). Inline error state
+ *     with proper email regex validation.
+ *   • useDocumentTitle → useDocumentMeta (ADR-015 consistency).
  *
- * Query param support:
+ * Query param support (unchanged):
  *   /contact?enquiry=agent    → pre-selects "Deploy an Agent"
  *   /contact?enquiry=web      → pre-selects "Build a Website"
  *   /contact?enquiry=seo      → pre-selects "SEO Strategy"
  *   /contact?enquiry=custom   → pre-selects "Custom Project"
  *   /contact?enquiry=enterprise → pre-selects "Enterprise Partner"
  *   /contact?plan=growth      → shows plan badge in form
- *
- * Formspree setup:
- *   1. Sign up at formspree.io
- *   2. Create a form — set recipient to pnyangwara@gmail.com
- *   3. Replace FORMSPREE_ID below with your form ID (e.g. "xpwzabcd")
  */
 
 import { useState, useEffect } from 'react'
@@ -31,18 +34,14 @@ import {
 } from 'lucide-react'
 
 // ─── Formspree config ─────────────────────────────────────────────────────────
-// ⚠️  ACTION REQUIRED before going live:
-//   1. Go to https://formspree.io → Sign Up → New Form
-//   2. Set the recipient email to: pnyangwara@gmail.com
-//   3. Copy the Form ID (the part after /f/ in your endpoint URL, e.g. "xpwzabcd")
-//   4. Replace 'YOUR_FORMSPREE_ID' below with that ID
-//   5. Redeploy — the contact form will then deliver emails correctly
-const FORMSPREE_ID = 'xqeykybz'
-const FORMSPREE_URL = `https://formspree.io/f/${FORMSPREE_ID}`
+// SEC-04: ID is read from VITE_FORMSPREE_ID env var (was hardcoded — v3.1 fix).
+// Set VITE_FORMSPREE_ID in .env.local and in the Vercel dashboard.
+// reCAPTCHA is enabled in the Formspree dashboard (no code change required).
+const FORMSPREE_URL = `https://formspree.io/f/${import.meta.env.VITE_FORMSPREE_ID}`
 import { useInView } from '../hooks/useInView'
 import { C, DARK, FONTS } from '../constants'
 import { useTheme } from '../context/ThemeContext'
-import { useDocumentTitle } from '../hooks/useDocumentMeta'
+import { useDocumentMeta } from '../hooks/useDocumentMeta'
 // ─── Font aliases (sourced from constants.js) ─────────────────────────────────
 const FD = FONTS.display
 const FB = FONTS.body
@@ -272,17 +271,31 @@ function ContactForm({ enquiryId, planLabel, onSubmit, submitting, submitError }
     agent_interest: '', current_site: '', website: '', message: '',
     pref: 'whatsapp',
   })
+  // BUG-05: inline validation errors replace alert()
+  const [errors, setErrors] = useState({})
 
-  const set = (key) => (e) => setForm(f => ({ ...f, [key]: e.target.value }))
+  const set = (key) => (e) => {
+    setForm(f => ({ ...f, [key]: e.target.value }))
+    if (errors[key]) setErrors(e2 => ({ ...e2, [key]: null }))
+  }
   const enquiry = ENQUIRY_TYPES.find(t => t.id === enquiryId) || ENQUIRY_TYPES[0]
+
+  const validate = () => {
+    const e = {}
+    if (!form.name.trim()) e.name = 'Please enter your name.'
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) e.email = 'Please enter a valid email address.'
+    setErrors(e)
+    return Object.keys(e).length === 0
+  }
 
   const handleSubmit = (e) => {
     e.preventDefault()
-    if (!form.name || !form.email) { alert('Please fill in your name and email.'); return }
+    if (!validate()) return
     onSubmit(form, enquiry)
   }
 
   const inputSx = { marginBottom: 16 }
+  const errStyle = { fontFamily: FB, fontSize: '0.78rem', color: '#ef4444', marginTop: 5, display: 'block' }
 
   return (
     <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
@@ -300,6 +313,7 @@ function ContactForm({ enquiryId, planLabel, onSubmit, submitting, submitError }
         <div>
           <Label required>Full Name</Label>
           <Input placeholder="Jane Wanjiku" value={form.name} onChange={set('name')} required />
+          {errors.name && <span style={errStyle}>{errors.name}</span>}
         </div>
         <div>
           <Label>Company Name</Label>
@@ -310,6 +324,7 @@ function ContactForm({ enquiryId, planLabel, onSubmit, submitting, submitError }
       <div style={inputSx}>
         <Label required>Email Address</Label>
         <Input type="email" placeholder="jane@acme.co.ke" value={form.email} onChange={set('email')} required />
+        {errors.email && <span style={errStyle}>{errors.email}</span>}
       </div>
 
       <div style={inputSx}>
@@ -336,7 +351,9 @@ function ContactForm({ enquiryId, planLabel, onSubmit, submitting, submitError }
               {['PESA — Payments Reconciliation', 'KODI — KRA Tax Compliance', 'MALIPO — Kenyan Payroll',
                 'Mkopo — SME Lending', 'DHAMINI — NSE Research', 'BIASHARA — EAC Trade',
                 'Bidhaa — Export Intelligence', 'Soko — Govt Tenders', 'Ruhusa — County Licensing',
-                'SHAMBA — Agriculture', 'Ardhi — Real Estate', 'ZURI — Customer Service'].map(a => (
+                'SHAMBA — Agriculture', 'Ardhi — Real Estate', 'ZURI — Customer Service',
+                'WAZO — Startup Idea Validation', // BUG-03: added in v3.1
+              ].map(a => (
                 <option key={a} value={a}>{a}</option>
               ))}
             </select>
@@ -393,6 +410,9 @@ function ContactForm({ enquiryId, planLabel, onSubmit, submitting, submitError }
         </div>
       </div>
 
+      {/* SEC-04: hidden honeypot — Formspree rejects submissions that fill this */}
+      <input type="text" name="_gotcha" style={{ display: 'none' }} tabIndex={-1} autoComplete="off" />
+
       {submitError && (
         <div style={{ background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)', borderRadius: 10, padding: '10px 14px', marginBottom: 16 }}>
           <p style={{ fontFamily: FB, fontSize: '0.85rem', color: '#ef4444', margin: 0 }}>{submitError}</p>
@@ -415,6 +435,31 @@ function ContactForm({ enquiryId, planLabel, onSubmit, submitting, submitError }
         {submitting ? 'Sending…' : 'Send Message →'}
       </button>
     </form>
+  )
+}
+
+// ─── SocialIcon — extracted from InfoPanel.SOCIAL.map() ──────────────────────
+// BUG-01 fix: useState was previously called inside SOCIAL.map() — a Rules of
+// Hooks violation. Each icon is now its own component with its own state.
+function SocialIcon({ Icon, href, label, svg }) {
+  const [hover, setHover] = useState(false)
+  return (
+    <a
+      href={href}
+      target="_blank" rel="noopener noreferrer" // SEC-05: added noopener
+      aria-label={label}
+      onMouseEnter={() => setHover(true)}
+      onMouseLeave={() => setHover(false)}
+      style={{
+        width: 36, height: 36, borderRadius: '50%',
+        border: `1px solid ${hover ? C.gold : '#1A3060'}`,
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        color: hover ? C.gold : '#94A3B8', textDecoration: 'none',
+        transition: 'all 0.25s',
+      }}
+    >
+      {Icon ? <Icon size={15} /> : svg}
+    </a>
   )
 }
 
@@ -460,29 +505,9 @@ function InfoPanel() {
           </div>
         ))}
 
-        {/* Social icons */}
+        {/* Social icons — BUG-01: each icon is now a <SocialIcon> component */}
         <div style={{ borderTop: '1px solid rgba(255,255,255,0.08)', paddingTop: 18, marginTop: 4, display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-          {SOCIAL.map(({ Icon, href, label, svg }) => {
-            const [hover, setHover] = useState(false)
-            return (
-              <a
-                key={label} href={href}
-                target="_blank" rel="noreferrer"
-                aria-label={label}
-                onMouseEnter={() => setHover(true)}
-                onMouseLeave={() => setHover(false)}
-                style={{
-                  width: 36, height: 36, borderRadius: '50%',
-                  border: `1px solid ${hover ? C.gold : '#1A3060'}`,
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  color: hover ? C.gold : '#94A3B8', textDecoration: 'none',
-                  transition: 'all 0.25s',
-                }}
-              >
-                {Icon ? <Icon size={15} /> : svg}
-              </a>
-            )
-          })}
+          {SOCIAL.map((item) => <SocialIcon key={item.label} {...item} />)}
         </div>
       </div>
 
@@ -674,7 +699,11 @@ function SuccessScreen({ enquiryId, onReset }) {
 // ─── ContactPage Root ────────────────────────────────────────────────────────
 export default function ContactPage() {
   const { dark } = useTheme()
-  useDocumentTitle('Contact')
+  useDocumentMeta({
+    title:       'Contact',
+    description: 'Get in touch with Neurospark Corporation. Deploy an AI agent, discuss a website, or plan your SEO strategy — we respond within 2 hours.',
+    canonical:   'https://neurosparkcorporation.ai/contact',
+  })
   const [searchParams]  = useSearchParams()
   const [enquiryId,     setEnquiryId]   = useState('agent')
   const [submitted,     setSubmitted]   = useState(false)
@@ -752,7 +781,7 @@ export default function ContactPage() {
 
       setSubmitted(true)
     } catch (err) {
-      setSubmitError('Something went wrong sending your message. Please try WhatsApp or email pnyangwara@gmail.com directly.')
+      setSubmitError('Something went wrong sending your message. Please use the WhatsApp button below to reach us directly.')
     } finally {
       setSubmitting(false)
     }

@@ -1,16 +1,11 @@
 /**
- * App.jsx — Neurospark Corporation  v3.0
+ * App.jsx — Neurospark Corporation  v3.1
  *
- * Changes from v2.9:
- *   • Nav restructure (UX audit §3):
- *       NAV_PRIMARY: [Agents, Services, About, Contact]  (was [Home, Agents, Services, Results])
- *       NAV_MORE:    [Blog, Projects, Results]           (was [About, Blog, Projects, Contact])
- *     Surfaces highest-conversion pages (About, Contact) in primary nav.
- *     Moves lower-frequency pages (Blog, Projects) to More dropdown.
- *   • Added /platforms/hesabu route → HesabuPlatformPage (agent-content-injection.md Track 2)
- *   • useDocumentTitle import changed to useDocumentMeta (ADR-015)
- *   • MeetAgents: agent count updated to 13 (WAZO added)
- *   • HomePage: secondary CTA updated to match new hero
+ * Changes from v3.0:
+ *   • FONTS imported from constants.js; FONT_DISPLAY / FONT_BODY are now
+ *     aliases (were hardcoded strings that could silently diverge — BUG-06)
+ *   • No routing changes in this file; see individual page files for
+ *     useScrollTop additions (AgentsPage, HesabuPlatformPage, NotFoundPage)
  *
  * Route map:
  *   /                      → HomePage
@@ -46,7 +41,7 @@ import { BtnGold, BtnGoldLink } from './components/ui/Buttons'
 import Eyebrow        from './components/ui/Eyebrow'
 import { useInView }  from './hooks/useInView'
 import { useDocumentMeta } from './hooks/useDocumentMeta'
-import { IMAGES, C, DARK } from './constants'
+import { IMAGES, C, DARK, FONTS } from './constants'
 import { useTheme }   from './context/ThemeContext'
 import { AGENT_PREVIEWS } from './data/agents'
 
@@ -82,8 +77,9 @@ function PageLoader() {
 }
 
 // ─── Design tokens ───────────────────────────────────────────────────────────
-const FONT_DISPLAY = "'Playfair Display', serif"
-const FONT_BODY    = "'DM Sans', sans-serif"
+// v3.1: sourced from constants.js — was previously duplicated as hardcoded strings
+const FONT_DISPLAY = FONTS.display
+const FONT_BODY    = FONTS.body
 
 // ─── useScrollNav ─────────────────────────────────────────────────────────────
 function useScrollNav() {

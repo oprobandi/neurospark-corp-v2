@@ -1,11 +1,14 @@
 /**
- * BlogPage.jsx — v3.0
+ * BlogPage.jsx — v3.1
  *
- * CRITICAL CHANGE from v2.9:
- *   BlogPage now fetches live posts from Hashnode via src/api/hashnode.js.
- *   The previous version imported static data from src/data/blog.js but
- *   NEVER called the Hashnode API — despite the client being built in v2.7.
- *   This was the primary functional bug identified in the codebase audit.
+ * Changes from v3.0:
+ *   • BUG-02: useDocumentMeta was called inside `if (slug)` — a Rules of Hooks
+ *     violation. Both the single-post and list-view calls are now merged into
+ *     one unconditional call at the component top level using a ternary.
+ *   • SEC-01: Hashnode HTML content is now passed through DOMPurify.sanitize()
+ *     with an explicit allowlist before dangerouslySetInnerHTML. Prevents XSS
+ *     if a blog post ever contains malicious markup.
+ *   • dompurify added as a project dependency (see package.json).
  *
  * Data Strategy (ADR-018: Hashnode-primary, static fallback):
  *   1. On mount, fetchPosts() from Hashnode API is called.
@@ -41,6 +44,7 @@
 import { useState, useEffect, useMemo } from 'react'
 import { useParams, Link, useNavigate } from 'react-router-dom'
 import { Search, Clock, Calendar, ArrowRight, X, ChevronRight, AlertCircle, Loader } from 'lucide-react'
+import DOMPurify from 'dompurify'
 import { useInView }  from '../hooks/useInView'
 import { C, DARK, FONTS, IMAGES } from '../constants'
 import { useTheme }   from '../context/ThemeContext'
@@ -367,12 +371,19 @@ function PostBody({ post }) {
           </p>
         )}
 
-        {/* Hashnode HTML content */}
+        {/* Hashnode HTML content — SEC-01: sanitized via DOMPurify before render */}
         {post.body?.length > 0 && post.body[0].type === 'html' ? (
           <div
             className="blog-prose"
             style={{ fontFamily: FB, fontSize: '1rem', color: dark ? DARK.text : C.charcoal, lineHeight: 1.9 }}
-            dangerouslySetInnerHTML={{ __html: post.body[0].content }}
+            dangerouslySetInnerHTML={{
+              __html: DOMPurify.sanitize(post.body[0].content, {
+                ALLOWED_TAGS: ['p','h2','h3','h4','ul','ol','li','a','strong','em',
+                               'code','pre','blockquote','img','br','hr','table',
+                               'thead','tbody','tr','th','td'],
+                ALLOWED_ATTR: ['href','src','alt','target','rel','class'],
+              }),
+            }}
           />
         ) : (
           /* Static block content */
@@ -444,6 +455,22 @@ export default function BlogPage() {
 
   useEffect(() => { window.scrollTo(0, 0) }, [slug])
 
+  // ── Per-page meta (BUG-02 fix: was split across if/else branches — Rules of Hooks violation)
+  // Both cases must be declared unconditionally at component top level.
+  useDocumentMeta(
+    slug
+      ? {
+          title:       singlePost ? singlePost.title : 'Blog',
+          description: singlePost?.excerpt || undefined,
+          canonical:   `https://neurosparkcorporation.ai/blog/${slug}`,
+        }
+      : {
+          title:       'Blog — AI, Tax & Automation for East African Business',
+          description: 'Practical guides on KRA compliance, M-Pesa reconciliation, SEO, and AI automation for Kenyan and East African businesses.',
+          canonical:   'https://neurosparkcorporation.ai/blog',
+        }
+  )
+
   // ── Fetch post list ────────────────────────────────────────────────────────
   useEffect(() => {
     let cancelled = false
@@ -490,11 +517,6 @@ export default function BlogPage() {
 
   // ── Single post view ───────────────────────────────────────────────────────
   if (slug) {
-    useDocumentMeta({
-      title:       singlePost ? singlePost.title : 'Blog',
-      description: singlePost?.excerpt || undefined,
-      canonical:   `https://neurosparkcorporation.ai/blog/${slug}`,
-    })
 
     if (singleLoading) return (
       <div style={{ minHeight: '60vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -521,12 +543,6 @@ export default function BlogPage() {
   }
 
   // ── List view ──────────────────────────────────────────────────────────────
-  useDocumentMeta({
-    title:       'Blog — AI, Tax & Automation for East African Business',
-    description: 'Practical guides on KRA compliance, M-Pesa reconciliation, SEO, and AI automation for Kenyan and East African businesses.',
-    canonical:   'https://neurosparkcorporation.ai/blog',
-  })
-
   // Merge: live posts first, fill with static if live is empty
   const displayPosts = posts.length ? posts : (error ? [] : STATIC_POSTS)
   const featuredPost  = displayPosts.find(p => p.featured) || displayPosts[0]

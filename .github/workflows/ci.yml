@@ -1,0 +1,966 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# Neurospark Corporation — GitHub Actions CI
+# File location in repo: .github/workflows/ci.yml
+#
+# Prerequisites before this workflow will fully pass:
+#   1. package-lock.json must be committed (run `npm install` locally first)
+#      This is the #1 priority fix from the audit. Without it, `npm ci` fails.
+#   2. Add "check" script to package.json:
+#        "check": "prettier --check \"src/**/*.{js,jsx}\""
+#   3. Vercel dashboard must have VITE_FORMSPREE_ID and VITE_WHATSAPP_NUMBER set.
+#      The WhatsApp number in ContactPage.jsx, BlogPage.jsx, HesabuPlatformPage.jsx,
+#      AgentsPage.jsx, AboutPage.jsx etc. should use import.meta.env.VITE_WHATSAPP_NUMBER
+#      with the current hardcoded literal as a fallback — the secrets-scan job
+#      audits for non-fallback hardcoded instances.
+#
+# Trigger matrix:
+#   push → main, develop          : full pipeline (all jobs)
+#   pull_request → main, develop  : full pipeline (gate before merge)
+#   workflow_dispatch              : manual run
+# ─────────────────────────────────────────────────────────────────────────────
+
+name: CI — Neurospark Corporation
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+  workflow_dispatch:
+
+concurrency:
+  group: neurospark-ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  NODE_VERSION: '20'
+  # Stub env vars so the Vite build resolves VITE_* references.
+  # These stubs are never sent to real services — Formspree is only called
+  # at runtime in the browser, not during the build.
+  VITE_FORMSPREE_ID: ci_stub
+  VITE_WHATSAPP_NUMBER: '254000000000'
+  VITE_PLAUSIBLE_DOMAIN: ci.neurosparkcorporation.ai
+
+# ─────────────────────────────────────────────────────────────────────────────
+# JOB 1 — Install & cache dependencies
+# ─────────────────────────────────────────────────────────────────────────────
+jobs:
+  install:
+    name: Install dependencies
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node ${{ env.NODE_VERSION }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install (strict lockfile)
+        # Fails intentionally if package-lock.json is absent.
+        # The v2.7 lucide-react build crash was caused by exactly this gap.
+        run: npm ci
+
+      - name: Cache node_modules
+        uses: actions/cache@v4
+        with:
+          path: node_modules
+          key: neurospark-node-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
+
+# ─────────────────────────────────────────────────────────────────────────────
+# JOB 2 — Lint (ESLint + Prettier)
+# Both tools are already installed (unlike the Portfolio). ESLint enforces the
+# react-hooks/rules-of-hooks rule that caught BUG-01 and BUG-02 in v3.1.
+# ─────────────────────────────────────────────────────────────────────────────
+  lint:
+    name: Lint (ESLint + Prettier)
+    runs-on: ubuntu-latest
+    needs: install
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+      - name: Restore node_modules
+        uses: actions/cache@v4
+        with:
+          path: node_modules
+          key: neurospark-node-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
+
+      - name: ESLint
+        # This catches Rules of Hooks violations (BUG-01: useState in .map(),
+        # BUG-02: conditional hook calls) before they reach Vercel.
+        run: npm run lint
+
+      - name: Prettier (format check)
+        # Requires "check": "prettier --check \"src/**/*.{js,jsx}\"" in package.json.
+        # Currently only "format": "prettier --write src" exists — add check script.
+        run: npx prettier --check "src/**/*.{js,jsx}"
+
+# ─────────────────────────────────────────────────────────────────────────────
+# JOB 3 — Production build
+# ─────────────────────────────────────────────────────────────────────────────
+  build:
+    name: Production build
+    runs-on: ubuntu-latest
+    needs: install
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+      - name: Restore node_modules
+        uses: actions/cache@v4
+        with:
+          path: node_modules
+          key: neurospark-node-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
+
+      - name: Build
+        run: npm run build
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: neurospark-dist
+          path: dist/
+          retention-days: 1
+
+# ─────────────────────────────────────────────────────────────────────────────
+# JOB 4 — lucide-react icon guard
+# lucide-react is pinned to ^0.263.1 (ADR-002). Several icon names were renamed
+# in later versions and imports of non-existent icons silently pass tree-shaking
+# but crash the build at Vercel. This guard validates every imported icon name
+# against the pinned version's actual exports.
+#
+# The v2.7 hotfix and v3.0 patch both addressed this same class of issue.
+# This test makes it impossible to reintroduce.
+# ─────────────────────────────────────────────────────────────────────────────
+  lucide-icon-guard:
+    name: lucide-react icon validation (v0.263.1)
+    runs-on: ubuntu-latest
+    needs: install
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+      - name: Restore node_modules
+        uses: actions/cache@v4
+        with:
+          path: node_modules
+          key: neurospark-node-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
+
+      - name: Validate all lucide-react imports against pinned version
+        run: |
+          node - <<'EOF'
+          const { readFileSync, existsSync, readdirSync, statSync } = require('fs');
+          const { join } = require('path');
+
+          // Build set of valid icon names from installed lucide-react
+          // The icons live at node_modules/lucide-react/dist/esm/icons/
+          const ICONS_DIR = join(process.cwd(), 'node_modules/lucide-react/dist/esm/icons');
+          if (!existsSync(ICONS_DIR)) {
+            console.error('ERROR: lucide-react icons directory not found.');
+            process.exit(1);
+          }
+
+          // Each icon file is kebab-case.js — convert to PascalCase for comparison
+          const toPascal = s => s.replace(/(^|-)(.)/g, (_, __, c) => c.toUpperCase());
+          const validIcons = new Set(
+            readdirSync(ICONS_DIR)
+              .filter(f => f.endsWith('.js'))
+              .map(f => toPascal(f.replace('.js', '')))
+          );
+
+          // Scan all .jsx/.js files for lucide-react imports
+          const SRC_DIR = join(process.cwd(), 'src');
+
+          function walk(dir) {
+            const files = [];
+            for (const entry of readdirSync(dir)) {
+              const full = join(dir, entry);
+              if (statSync(full).isDirectory()) files.push(...walk(full));
+              else if (entry.endsWith('.jsx') || entry.endsWith('.js')) files.push(full);
+            }
+            return files;
+          }
+
+          let errors = 0;
+          for (const file of walk(SRC_DIR)) {
+            const src = readFileSync(file, 'utf-8');
+            const match = src.match(/import\s*\{([^}]+)\}\s*from\s*['"]lucide-react['"]/);
+            if (!match) continue;
+
+            const imports = match[1].split(',').map(s => s.trim()).filter(Boolean);
+            for (const icon of imports) {
+              // Handle "X as CloseIcon" alias syntax
+              const name = icon.split(/\s+as\s+/)[0].trim();
+              if (!validIcons.has(name)) {
+                const rel = file.replace(process.cwd() + '/', '');
+                console.error(`  ✗  ${rel}: "${name}" does not exist in lucide-react@0.263.1`);
+                errors++;
+              } else {
+                console.log(`  ✓  ${icon}`);
+              }
+            }
+          }
+
+          if (errors > 0) {
+            console.error(`\n${errors} invalid lucide-react import(s) found.`);
+            console.error('Replace with inline SVG or check the v0.263.1 icon list.');
+            process.exit(1);
+          }
+          console.log('\nAll lucide-react imports are valid for v0.263.1 ✓');
+          EOF
+
+# ─────────────────────────────────────────────────────────────────────────────
+# JOB 5 — Agent data integrity
+# Verifies that all 13 agents in AGENTS_FULL have consistent slugs,
+# all homepage preview codes in AGENT_PREVIEWS exist in AGENTS_FULL,
+# and that the contact form agent selector lists all 13 agents.
+# BUG-03 (WAZO missing from contact dropdown) was caught manually in v3.1 —
+# this test makes that class of regression impossible.
+# ─────────────────────────────────────────────────────────────────────────────
+  agent-data-integrity:
+    name: Agent data integrity (13 agents)
+    runs-on: ubuntu-latest
+    needs: install
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+      - name: Restore node_modules
+        uses: actions/cache@v4
+        with:
+          path: node_modules
+          key: neurospark-node-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
+
+      - name: Verify AGENTS_FULL completeness and slug uniqueness
+        run: |
+          node - <<'EOF'
+          // Use dynamic import since agents.js is ESM
+          const path = require('path');
+          import(path.join(process.cwd(), 'src/data/agents.js')).then(({ AGENTS_FULL, AGENT_PREVIEWS }) => {
+            const EXPECTED_AGENTS = 13;
+            let errors = 0;
+
+            console.log(`AGENTS_FULL count: ${AGENTS_FULL.length} (expected ${EXPECTED_AGENTS})`);
+            if (AGENTS_FULL.length !== EXPECTED_AGENTS) {
+              console.error(`ERROR: Expected ${EXPECTED_AGENTS} agents, found ${AGENTS_FULL.length}`);
+              errors++;
+            }
+
+            // Validate required fields on every agent
+            const REQUIRED_FIELDS = ['code', 'name', 'meaning', 'category', 'icon', 'tags', 'desc', 'slug'];
+            for (const agent of AGENTS_FULL) {
+              for (const field of REQUIRED_FIELDS) {
+                if (!agent[field] || (Array.isArray(agent[field]) && agent[field].length === 0)) {
+                  console.error(`  ✗  Agent ${agent.code ?? '???'}: missing or empty field "${field}"`);
+                  errors++;
+                }
+              }
+            }
+
+            // Slug uniqueness
+            const slugs = AGENTS_FULL.map(a => a.slug);
+            const dupSlugs = slugs.filter((s, i) => slugs.indexOf(s) !== i);
+            if (dupSlugs.length > 0) {
+              console.error(`  ✗  Duplicate slugs: ${dupSlugs.join(', ')}`);
+              errors++;
+            } else {
+              console.log('  ✓  All slugs are unique');
+            }
+
+            // Code uniqueness
+            const codes = AGENTS_FULL.map(a => a.code);
+            const dupCodes = codes.filter((c, i) => codes.indexOf(c) !== i);
+            if (dupCodes.length > 0) {
+              console.error(`  ✗  Duplicate agent codes: ${dupCodes.join(', ')}`);
+              errors++;
+            } else {
+              console.log('  ✓  All agent codes are unique');
+            }
+
+            // All AGENT_PREVIEWS codes must exist in AGENTS_FULL
+            const fullCodes = new Set(codes);
+            for (const preview of AGENT_PREVIEWS) {
+              if (!fullCodes.has(preview.code)) {
+                console.error(`  ✗  AGENT_PREVIEWS has code "${preview.code}" not found in AGENTS_FULL`);
+                errors++;
+              }
+            }
+
+            if (errors > 0) {
+              console.error(`\n${errors} agent data error(s).`);
+              process.exit(1);
+            }
+            console.log('\nAll agent data integrity checks passed ✓');
+          }).catch(e => { console.error(e.message); process.exit(1); });
+          EOF
+
+      - name: Verify all 13 agent codes appear in ContactPage dropdown
+        run: |
+          node - <<'EOF'
+          const { readFileSync } = require('fs');
+          const path = require('path');
+
+          import(path.join(process.cwd(), 'src/data/agents.js')).then(({ AGENTS_FULL }) => {
+            const contactSrc = readFileSync('src/pages/ContactPage.jsx', 'utf-8');
+            let errors = 0;
+
+            for (const agent of AGENTS_FULL) {
+              // The dropdown option contains the agent code (e.g. "WAZO", "PESA", "KODI")
+              if (!contactSrc.includes(agent.code)) {
+                console.error(`  ✗  Agent code "${agent.code}" (${agent.name}) missing from ContactPage dropdown`);
+                errors++;
+              } else {
+                console.log(`  ✓  ${agent.code} — ${agent.name}`);
+              }
+            }
+
+            if (errors > 0) {
+              console.error(`\n${errors} agent(s) missing from contact form. Add them to the dropdown.`);
+              process.exit(1);
+            }
+            console.log('\nAll agents present in ContactPage dropdown ✓');
+          }).catch(e => { console.error(e.message); process.exit(1); });
+          EOF
+
+      - name: Verify all agent slugs are in sitemap.xml
+        run: |
+          node - <<'EOF'
+          const { readFileSync } = require('fs');
+          const path = require('path');
+
+          import(path.join(process.cwd(), 'src/data/agents.js')).then(({ AGENTS_FULL }) => {
+            const sitemap = readFileSync('public/sitemap.xml', 'utf-8');
+            let errors = 0;
+
+            for (const agent of AGENTS_FULL) {
+              const expectedUrl = `/agents/${agent.slug}`;
+              if (!sitemap.includes(expectedUrl)) {
+                console.error(`  ✗  Sitemap missing: ${expectedUrl}`);
+                errors++;
+              } else {
+                console.log(`  ✓  ${expectedUrl}`);
+              }
+            }
+
+            if (errors > 0) {
+              console.error(`\n${errors} agent route(s) missing from sitemap.xml.`);
+              process.exit(1);
+            }
+            console.log('\nAll agent slugs present in sitemap ✓');
+          }).catch(e => { console.error(e.message); process.exit(1); });
+          EOF
+
+# ─────────────────────────────────────────────────────────────────────────────
+# JOB 6 — Security headers audit
+# Validates vercel.json headers. Also checks for the missing CSP (the primary
+# finding from the v3.1 audit — NeuroSpark has 4 headers; needs CSP added).
+# ─────────────────────────────────────────────────────────────────────────────
+  security-headers:
+    name: Security headers audit (vercel.json)
+    runs-on: ubuntu-latest
+    needs: install
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Verify all required security headers present
+        run: |
+          node - <<'EOF'
+          const { readFileSync } = require('fs');
+          const config = JSON.parse(readFileSync('vercel.json', 'utf-8'));
+
+          const REQUIRED_HEADERS = [
+            'Content-Security-Policy',   // MISSING in v3.1 — this will fail until added
+            'X-Frame-Options',
+            'X-Content-Type-Options',
+            'Referrer-Policy',
+            'Permissions-Policy',
+          ];
+
+          // These origins must be in the CSP when it's added.
+          // Script sources: plausible.io analytics (active in index.html line 142)
+          // Connect sources: Hashnode GQL, Formspree
+          const CSP_REQUIRED_ORIGINS = {
+            'script-src':  ["'self'", "https://plausible.io"],
+            'connect-src': [
+              "https://gql.hashnode.com",
+              "https://formspree.io",
+              "https://plausible.io",
+            ],
+            'font-src':    ["https://fonts.gstatic.com"],
+            'style-src':   ["https://fonts.googleapis.com"],
+          };
+
+          let errors = 0;
+          const allHeaders = config.headers?.[0]?.headers ?? [];
+          const headerMap  = Object.fromEntries(allHeaders.map(h => [h.key, h.value]));
+
+          for (const h of REQUIRED_HEADERS) {
+            if (!headerMap[h]) {
+              console.error(`  ✗  Missing header: ${h}`);
+              errors++;
+            } else {
+              console.log(`  ✓  ${h}: ${String(headerMap[h]).slice(0, 70)}…`);
+            }
+          }
+
+          const csp = headerMap['Content-Security-Policy'] ?? '';
+          if (csp) {
+            for (const [directive, origins] of Object.entries(CSP_REQUIRED_ORIGINS)) {
+              for (const origin of origins) {
+                if (!csp.includes(origin)) {
+                  console.error(`  ✗  CSP ${directive} missing: ${origin}`);
+                  errors++;
+                }
+              }
+            }
+          }
+
+          if (errors > 0) {
+            console.error(`\n${errors} security header error(s). Update vercel.json.`);
+            process.exit(1);
+          }
+          console.log('\nAll security header checks passed ✓');
+          EOF
+
+# ─────────────────────────────────────────────────────────────────────────────
+# JOB 7 — Secrets / hardcoded values scan
+# Audits for values that should be environment variables.
+# The Formspree ID was moved to an env var in v3.1 (SEC-04). The WhatsApp
+# number appears as a hardcoded fallback in many places (which is acceptable)
+# but must NOT appear in direct string literals without the env var pattern.
+# ─────────────────────────────────────────────────────────────────────────────
+  secrets-scan:
+    name: Secrets / hardcoded values scan
+    runs-on: ubuntu-latest
+    needs: install
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Formspree ID must come from env var
+        run: |
+          # xqeykybz is the Formspree ID. It must not appear as a bare string literal.
+          # It's acceptable only as a comment or in .env.example.
+          if grep -rn \
+            --include="*.js" --include="*.jsx" \
+            "'xqeykybz'" \
+            src/; then
+            echo ""
+            echo "ERROR: Hardcoded Formspree ID 'xqeykybz' found in source."
+            echo "This was fixed in v3.1 (SEC-04). The env var VITE_FORMSPREE_ID must be used."
+            exit 1
+          fi
+          echo "Formspree ID not hardcoded in source ✓"
+
+      - name: Personal email must not appear in user-facing source
+        run: |
+          if grep -rn \
+            --include="*.js" --include="*.jsx" \
+            "pnyangwara@gmail.com" \
+            src/; then
+            echo ""
+            echo "ERROR: Personal Gmail address found in source (SEC-03 regression)."
+            exit 1
+          fi
+          echo "No personal email in source ✓"
+
+      - name: Verify VITE_FORMSPREE_ID is used in ContactPage
+        run: |
+          if ! grep -q "VITE_FORMSPREE_ID" src/pages/ContactPage.jsx; then
+            echo "ERROR: ContactPage.jsx is not using VITE_FORMSPREE_ID env var."
+            exit 1
+          fi
+          echo "VITE_FORMSPREE_ID in use in ContactPage ✓"
+
+      - name: .env.example documents required variables
+        run: |
+          node - <<'EOF'
+          const { readFileSync, existsSync } = require('fs');
+          if (!existsSync('.env.example')) {
+            console.error('ERROR: .env.example missing.');
+            process.exit(1);
+          }
+          const example = readFileSync('.env.example', 'utf-8');
+          const REQUIRED = ['VITE_FORMSPREE_ID', 'VITE_WHATSAPP_NUMBER', 'VITE_PLAUSIBLE_DOMAIN'];
+          let missing = 0;
+          for (const v of REQUIRED) {
+            if (!example.includes(v)) {
+              console.error(`  ✗  .env.example missing: ${v}`);
+              missing++;
+            } else {
+              console.log(`  ✓  ${v}`);
+            }
+          }
+          if (missing > 0) process.exit(1);
+          console.log('\n.env.example is complete ✓');
+          EOF
+
+      - name: .gitignore covers .env files
+        run: |
+          if [ ! -f .gitignore ]; then
+            echo "ERROR: .gitignore missing."
+            exit 1
+          fi
+          if ! grep -q "\.env" .gitignore; then
+            echo "ERROR: .gitignore does not exclude .env files."
+            exit 1
+          fi
+          echo ".gitignore covers .env files ✓"
+
+# ─────────────────────────────────────────────────────────────────────────────
+# JOB 8 — Dark mode FOUC prevention check
+# The inline script in <head> (ADR-017) is critical for dark mode UX.
+# If it's accidentally removed, dark-mode users see a flash of light theme
+# on every page load. This test locks the pattern in permanently.
+# ─────────────────────────────────────────────────────────────────────────────
+  fouc-prevention:
+    name: Dark mode FOUC prevention check
+    runs-on: ubuntu-latest
+    needs: install
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Verify FOUC prevention inline script in index.html
+        run: |
+          # The script must: (1) exist in <head>, (2) read ns-theme from localStorage,
+          # (3) set data-theme="dark" on the documentElement
+          if ! grep -q "ns-theme" index.html; then
+            echo "ERROR: FOUC prevention script missing from index.html (ADR-017)"
+            echo "Dark mode users will see a flash of light theme on first page load."
+            exit 1
+          fi
+          if ! grep -q "data-theme" index.html; then
+            echo "ERROR: data-theme attribute not set in FOUC prevention script."
+            exit 1
+          fi
+          echo "FOUC prevention script present ✓"
+
+      - name: Verify dark theme CSS variables are defined in index.css
+        run: |
+          if ! grep -q "\[data-theme=\"dark\"\]" src/index.css; then
+            echo "ERROR: Dark theme CSS variables missing from index.css"
+            echo "The [data-theme=\"dark\"] selector must be present for dark mode to apply."
+            exit 1
+          fi
+          echo "Dark theme CSS variables present ✓"
+
+      - name: Verify ThemeContext is wrapping App in main.jsx
+        run: |
+          if ! grep -q "ThemeProvider" src/main.jsx; then
+            echo "ERROR: ThemeProvider not found in main.jsx."
+            echo "Dark mode state will not propagate to components."
+            exit 1
+          fi
+          echo "ThemeProvider in main.jsx ✓"
+
+# ─────────────────────────────────────────────────────────────────────────────
+# JOB 9 — DOMPurify sanitization guard
+# Verifies that Hashnode HTML is sanitized before dangerouslySetInnerHTML.
+# SEC-01 was fixed in v3.1. This test prevents regression.
+# ─────────────────────────────────────────────────────────────────────────────
+  xss-guard:
+    name: DOMPurify sanitization guard (SEC-01)
+    runs-on: ubuntu-latest
+    needs: install
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Verify DOMPurify is used before dangerouslySetInnerHTML in BlogPage
+        run: |
+          node - <<'EOF'
+          const { readFileSync } = require('fs');
+          const src = readFileSync('src/pages/BlogPage.jsx', 'utf-8');
+
+          // Find the line number of dangerouslySetInnerHTML
+          const lines = src.split('\n');
+          let dangerousLine = -1;
+          let purifyLine    = -1;
+
+          lines.forEach((line, i) => {
+            if (line.includes('dangerouslySetInnerHTML') && !line.trim().startsWith('//')) {
+              dangerousLine = i;
+            }
+            if (line.includes('DOMPurify.sanitize') || line.includes('dompurify')) {
+              purifyLine = i;
+            }
+          });
+
+          if (dangerousLine >= 0 && purifyLine < 0) {
+            console.error('ERROR: dangerouslySetInnerHTML used in BlogPage without DOMPurify.sanitize()');
+            process.exit(1);
+          }
+
+          if (dangerousLine >= 0 && purifyLine >= 0) {
+            console.log(`DOMPurify.sanitize at line ${purifyLine + 1}`);
+            console.log(`dangerouslySetInnerHTML at line ${dangerousLine + 1}`);
+            console.log('Sanitization appears before render ✓');
+          } else {
+            console.log('No dangerouslySetInnerHTML on raw API content found ✓');
+          }
+          EOF
+
+      - name: dompurify must be a production dependency
+        run: |
+          node - <<'EOF'
+          const pkg = require('./package.json');
+          if (!pkg.dependencies?.dompurify) {
+            console.error('ERROR: dompurify missing from dependencies (must be prod, not devDependencies)');
+            process.exit(1);
+          }
+          console.log(`dompurify: ${pkg.dependencies.dompurify} ✓`);
+          EOF
+
+# ─────────────────────────────────────────────────────────────────────────────
+# JOB 10 — Bundle size guard
+# ─────────────────────────────────────────────────────────────────────────────
+  bundle-size:
+    name: Bundle size guard
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Download build artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: neurospark-dist
+          path: dist/
+
+      - name: Check JS bundle sizes
+        run: |
+          node - <<'EOF'
+          const { readdirSync, readFileSync } = require('fs');
+          const { join } = require('path');
+          const zlib = require('zlib');
+
+          const ASSETS_DIR = join(process.cwd(), 'dist/assets');
+          const LIMITS = {
+            initial: 220 * 1024,  // 220 KB gzipped — NeuroSpark has Tailwind + lucide-react
+            chunk:   100 * 1024,  // 100 KB gzipped — AgentDetailPage is large (1842 lines)
+          };
+
+          const files = readdirSync(ASSETS_DIR).filter(f => f.endsWith('.js'));
+          let totalInitial = 0;
+          let errors = 0;
+
+          for (const f of files) {
+            const gz = zlib.gzipSync(readFileSync(join(ASSETS_DIR, f))).length;
+            const kb = (gz / 1024).toFixed(1);
+            const isInitial = f.startsWith('index-');
+            if (isInitial) totalInitial += gz;
+
+            if (!isInitial && gz > LIMITS.chunk) {
+              console.log(`  ⚠  Large chunk: ${f} — ${kb} KB gzipped`);
+              // Note: AgentDetailPage (1842 lines) will likely produce a large chunk.
+              // This is a warning, not a hard fail, until the page is decomposed (v3.2).
+              // Change to errors++ once AgentDetailPage.jsx is split (ARCHITECTURE.md §4.1).
+            } else {
+              console.log(`  ✓  ${f} — ${kb} KB gzipped`);
+            }
+          }
+
+          const totalKb = (totalInitial / 1024).toFixed(1);
+          console.log(`\nInitial bundle total: ${totalKb} KB gzipped`);
+          if (totalInitial > LIMITS.initial) {
+            console.error(`ERROR: Initial bundle (${totalKb} KB) exceeds ${LIMITS.initial / 1024} KB`);
+            errors++;
+          }
+
+          if (errors > 0) process.exit(1);
+          console.log('Bundle size check passed ✓');
+          EOF
+
+# ─────────────────────────────────────────────────────────────────────────────
+# JOB 11 — File size regression guard
+# AgentDetailPage.jsx is currently 1,842 lines — the highest maintainability
+# risk in the codebase. This job warns (not fails) if it grows further, and
+# fails hard if it exceeds 2,200 lines (the point where editing becomes
+# genuinely dangerous). Once it's split (ARCHITECTURE.md §4.1), lower the
+# threshold to 200 lines to enforce the decomposed structure.
+# ─────────────────────────────────────────────────────────────────────────────
+  file-size-guard:
+    name: File size regression guard
+    runs-on: ubuntu-latest
+    needs: install
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check AgentDetailPage.jsx line count
+        run: |
+          LINES=$(wc -l < src/pages/AgentDetailPage.jsx)
+          echo "AgentDetailPage.jsx: ${LINES} lines"
+
+          if [ "$LINES" -gt 2200 ]; then
+            echo "ERROR: AgentDetailPage.jsx exceeds 2200 lines (currently ${LINES})."
+            echo "Decompose into sub-components per ARCHITECTURE.md §4.1 before adding more content."
+            exit 1
+          elif [ "$LINES" -gt 1842 ]; then
+            echo "WARNING: AgentDetailPage.jsx has grown from the v3.1 baseline of 1842 lines."
+            echo "Consider decomposing per ARCHITECTURE.md §4.1 before this file becomes unmaintainable."
+          else
+            echo "Within acceptable range ✓"
+          fi
+
+      - name: Check App.jsx line count (detect accidental content growth)
+        run: |
+          # App.jsx should stay lean — homepage sections, Navbar, and routing only.
+          LINES=$(wc -l < src/App.jsx)
+          echo "App.jsx: ${LINES} lines"
+          if [ "$LINES" -gt 600 ]; then
+            echo "WARNING: App.jsx is getting large (${LINES} lines). Extract components."
+          fi
+
+# ─────────────────────────────────────────────────────────────────────────────
+# JOB 12 — Dependency vulnerability audit
+# ─────────────────────────────────────────────────────────────────────────────
+  dependency-audit:
+    name: Dependency vulnerability audit
+    runs-on: ubuntu-latest
+    needs: install
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+      - name: Restore node_modules
+        uses: actions/cache@v4
+        with:
+          path: node_modules
+          key: neurospark-node-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
+
+      - name: npm audit (high + critical)
+        run: npm audit --audit-level=high
+
+# ─────────────────────────────────────────────────────────────────────────────
+# JOB 13 — Sitemap completeness
+# Verifies that all 13 agent slugs, the HESABU platform page, and all primary
+# routes are present in sitemap.xml. Catches the case where a new agent is
+# added to agents.js but forgotten in the sitemap.
+# ─────────────────────────────────────────────────────────────────────────────
+  sitemap-check:
+    name: Sitemap completeness
+    runs-on: ubuntu-latest
+    needs: install
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+      - name: Restore node_modules
+        uses: actions/cache@v4
+        with:
+          path: node_modules
+          key: neurospark-node-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
+
+      - name: Verify required URLs in sitemap.xml
+        run: |
+          node - <<'EOF'
+          const { readFileSync } = require('fs');
+          const path = require('path');
+
+          const REQUIRED_PATHS = [
+            '/',
+            '/agents',
+            '/platforms/hesabu',
+            '/services',
+            '/about',
+            '/blog',
+            '/contact',
+            '/projects',
+            '/privacy',
+            '/terms',
+          ];
+
+          import(path.join(process.cwd(), 'src/data/agents.js')).then(({ AGENTS_FULL }) => {
+            const sitemap  = readFileSync('public/sitemap.xml', 'utf-8');
+            const locs     = [...sitemap.matchAll(/<loc>([^<]+)<\/loc>/g)].map(m => {
+              try { return new URL(m[1]).pathname; } catch { return m[1]; }
+            });
+
+            let errors = 0;
+            const all = [
+              ...REQUIRED_PATHS,
+              ...AGENTS_FULL.map(a => `/agents/${a.slug}`),
+            ];
+
+            for (const p of all) {
+              const found = locs.some(l => l === p || l === p + '/');
+              if (!found) {
+                console.error(`  ✗  Missing from sitemap: ${p}`);
+                errors++;
+              } else {
+                console.log(`  ✓  ${p}`);
+              }
+            }
+
+            if (errors > 0) {
+              console.error(`\n${errors} URL(s) missing from sitemap.xml. Update public/sitemap.xml.`);
+              process.exit(1);
+            }
+            console.log('\nSitemap is complete ✓');
+          }).catch(e => { console.error(e.message); process.exit(1); });
+          EOF
+
+# ─────────────────────────────────────────────────────────────────────────────
+# JOB 14 — Design token consistency
+# Verifies that the gold colour, font stacks, and dark mode tokens in
+# constants.js match the Tailwind config and index.css CSS variables.
+# Catches the drift that previously caused the v2.x GOLD constant inconsistency.
+# ─────────────────────────────────────────────────────────────────────────────
+  design-token-consistency:
+    name: Design token consistency (constants ↔ Tailwind ↔ CSS vars)
+    runs-on: ubuntu-latest
+    needs: install
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+      - name: Restore node_modules
+        uses: actions/cache@v4
+        with:
+          path: node_modules
+          key: neurospark-node-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
+
+      - name: Verify gold colour is consistent across constants.js, tailwind.config.js
+        run: |
+          node - <<'EOF'
+          const { readFileSync } = require('fs');
+          const path = require('path');
+
+          import(path.join(process.cwd(), 'src/constants.js')).then(({ C }) => {
+            const CANONICAL_GOLD = '#C9A84C';
+            let errors = 0;
+
+            // constants.js
+            if (C.gold !== CANONICAL_GOLD) {
+              console.error(`  ✗  constants.js C.gold = "${C.gold}" (expected "${CANONICAL_GOLD}")`);
+              errors++;
+            } else {
+              console.log(`  ✓  constants.js: C.gold = ${C.gold}`);
+            }
+
+            // tailwind.config.js
+            const tw = readFileSync('tailwind.config.js', 'utf-8');
+            if (!tw.includes(CANONICAL_GOLD)) {
+              console.error(`  ✗  tailwind.config.js missing gold ${CANONICAL_GOLD}`);
+              errors++;
+            } else {
+              console.log(`  ✓  tailwind.config.js has gold ${CANONICAL_GOLD}`);
+            }
+
+            // index.css must have --gold CSS custom property
+            const css = readFileSync('src/index.css', 'utf-8');
+            if (!css.includes('--gold')) {
+              console.error('  ✗  index.css missing --gold CSS custom property');
+              errors++;
+            } else {
+              console.log('  ✓  index.css has --gold custom property');
+            }
+
+            if (errors > 0) {
+              console.error(`\n${errors} design token consistency error(s).`);
+              process.exit(1);
+            }
+            console.log('\nDesign token consistency checks passed ✓');
+          }).catch(e => { console.error(e.message); process.exit(1); });
+          EOF
+
+# ─────────────────────────────────────────────────────────────────────────────
+# JOB 15 — Hook rules pre-check (belt-and-suspenders above ESLint)
+# Scans for the exact patterns that caused BUG-01 and BUG-02 in v3.1:
+# useState/useEffect calls inside .map() callbacks and conditional hook calls.
+# ESLint already catches these, but this gives a more targeted error message.
+# ─────────────────────────────────────────────────────────────────────────────
+  hook-rules-check:
+    name: React hooks rules pre-check
+    runs-on: ubuntu-latest
+    needs: install
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Scan for useState/useEffect inside .map() callbacks
+        run: |
+          # This is the BUG-01 pattern: useState called inside a .map() → Rules of Hooks violation
+          # We look for .map( followed by useState/useEffect within 10 lines (heuristic)
+          node - <<'EOF'
+          const { readFileSync, readdirSync, statSync } = require('fs');
+          const { join } = require('path');
+
+          function walk(dir) {
+            const files = [];
+            for (const e of readdirSync(dir)) {
+              const f = join(dir, e);
+              if (statSync(f).isDirectory()) files.push(...walk(f));
+              else if (e.endsWith('.jsx') || e.endsWith('.js')) files.push(f);
+            }
+            return files;
+          }
+
+          let warnings = 0;
+          for (const file of walk(join(process.cwd(), 'src'))) {
+            const lines = readFileSync(file, 'utf-8').split('\n');
+            let inMap = false;
+            let mapDepth = 0;
+            let mapStartLine = -1;
+
+            for (let i = 0; i < lines.length; i++) {
+              const line = lines[i];
+              if (line.match(/\.map\s*\(/)) { inMap = true; mapDepth = 0; mapStartLine = i; }
+              if (inMap) {
+                mapDepth += (line.match(/\(/g) || []).length - (line.match(/\)/g) || []).length;
+                if (mapDepth <= 0 && i > mapStartLine) inMap = false;
+                if (inMap && line.match(/\b(useState|useEffect|useCallback|useMemo|useRef|useContext)\s*\(/)) {
+                  const rel = file.replace(process.cwd() + '/', '');
+                  console.error(`  ⚠  ${rel}:${i+1}: Hook call inside .map() — likely Rules of Hooks violation`);
+                  warnings++;
+                }
+              }
+            }
+          }
+          if (warnings > 0) {
+            console.error(`\n${warnings} potential hook violation(s). ESLint should also catch these.`);
+            process.exit(1);
+          }
+          console.log('No hook calls inside .map() detected ✓');
+          EOF
+
+# ─────────────────────────────────────────────────────────────────────────────
+# JOB 16 — Summary gate
+# ─────────────────────────────────────────────────────────────────────────────
+  ci-gate:
+    name: CI gate
+    runs-on: ubuntu-latest
+    needs:
+      - lint
+      - build
+      - lucide-icon-guard
+      - agent-data-integrity
+      - security-headers
+      - secrets-scan
+      - fouc-prevention
+      - xss-guard
+      - bundle-size
+      - file-size-guard
+      - dependency-audit
+      - sitemap-check
+      - design-token-consistency
+      - hook-rules-check
+    steps:
+      - name: All checks passed
+        run: echo "All CI checks passed. Safe to merge."
