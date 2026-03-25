@@ -319,7 +319,7 @@ function ServiceTabNav({ active }) {
 }
 
 // ─── 3a. FeatureGrid ────────────────────────────────────────────────────────
-function FeatureGrid({ features, dark, visible }) {
+function FeatureGrid({ features, visible }) {
   const { dark } = useTheme()
   return (
     <div className="grid gap-5 mb-16" style={{ gridTemplateColumns: 'repeat(auto-fit,minmax(260px,1fr))' }}>
@@ -358,7 +358,7 @@ function FeatureGrid({ features, dark, visible }) {
 }
 
 // ─── 3b. ProcessTimeline ────────────────────────────────────────────────────
-function ProcessTimeline({ steps, dark, visible }) {
+function ProcessTimeline({ steps, visible }) {
   const { dark } = useTheme()
   const [openStep, setOpenStep] = useState(null)
   const textColor = dark ? 'white' : C.navy
@@ -426,7 +426,7 @@ function ProcessTimeline({ steps, dark, visible }) {
 }
 
 // ─── 3c. Deliverables ───────────────────────────────────────────────────────
-function Deliverables({ items, dark, visible }) {
+function Deliverables({ items, visible }) {
   const { dark } = useTheme()
   const textColor  = dark ? 'white' : C.navy
   const mutedColor = dark ? '#94A3B8' : C.muted
@@ -453,7 +453,7 @@ function Deliverables({ items, dark, visible }) {
 }
 
 // ─── 3d. TechStack ──────────────────────────────────────────────────────────
-function TechStack({ items, dark }) {
+function TechStack({ items }) {
   const { dark } = useTheme()
   return (
     <div className="mb-16">
@@ -478,7 +478,7 @@ function TechStack({ items, dark }) {
 }
 
 // ─── 3e. ServiceFAQ ─────────────────────────────────────────────────────────
-function ServiceFAQ({ faq, dark }) {
+function ServiceFAQ({ faq }) {
   const { dark } = useTheme()
   const [open, setOpen] = useState(null)
   const textColor  = dark ? 'white' : C.navy
@@ -514,7 +514,7 @@ function ServiceFAQ({ faq, dark }) {
 function ServiceBlock({ service }) {
   const { dark } = useTheme()
   const [ref, visible] = useInView(0.05)
-  const { dark, bg } = service
+  const { dark: serviceDark, bg } = service
 
   const headColor    = dark ? 'white' : C.navy
   const subColor     = dark ? '#94A3B8' : C.muted
