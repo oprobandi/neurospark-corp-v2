@@ -1,11 +1,13 @@
 /**
- * App.jsx — Neurospark Corporation  v3.1
+ * App.jsx — Neurospark Corporation  v3.3.1
  *
- * Changes from v3.0:
- *   • FONTS imported from constants.js; FONT_DISPLAY / FONT_BODY are now
- *     aliases (were hardcoded strings that could silently diverge — BUG-06)
- *   • No routing changes in this file; see individual page files for
- *     useScrollTop additions (AgentsPage, HesabuPlatformPage, NotFoundPage)
+ * Changes from v3.3:
+ *   • /faq route added → FAQPage (NEW — dedicated FAQ with accordion by category)
+ *   • FAQ added to NAV_MORE dropdown and mobile overlay
+ *   • Agents CTA confirmed present in Hero.jsx (was added in v3.0 — no change needed)
+ *   • Testimonial avatar URLs refreshed → confirmed Black African professional photos
+ *   • OG image updated: /og-image.jpg (1200×630) replaces /logo.jpg
+ *   • og:image:width and og:image:height meta tags added to index.html
  *
  * Route map:
  *   /                      → HomePage
@@ -54,6 +56,7 @@ const AboutPage           = lazy(() => import('./pages/AboutPage'))
 const BlogPage            = lazy(() => import('./pages/BlogPage'))
 const ProjectsPage        = lazy(() => import('./pages/ProjectsPage'))
 const ContactPage         = lazy(() => import('./pages/ContactPage'))
+const FAQPage             = lazy(() => import('./pages/FAQPage'))
 const PrivacyPage         = lazy(() => import('./pages/PrivacyPage'))
 const TermsPage           = lazy(() => import('./pages/TermsPage'))
 const NotFoundPage        = lazy(() => import('./pages/NotFoundPage'))
@@ -95,19 +98,22 @@ function useScrollNav() {
   }
 }
 
-// ─── Nav config — v3.0 restructure ───────────────────────────────────────────
-// PRIMARY: Agents, Services, About, Contact — highest-conversion pages always visible
-// MORE:    Blog, Projects, Results — lower-frequency / scroll-anchor items
+// ─── Nav config — v3.3 redesign ───────────────────────────────────────────────
+// PRIMARY (max 4): Home, About, Services, Contact — clean, conversion-focused
+// MORE dropdown:   Agents, Hesabu, Blog, Projects, Results — everything else
 const NAV_PRIMARY = [
-  { label: 'Agents',   type: 'route',  href: '/agents'   },
-  { label: 'Services', type: 'route',  href: '/services' },
+  { label: 'Home',     type: 'route',  href: '/'         },
   { label: 'About',    type: 'route',  href: '/about'    },
+  { label: 'Services', type: 'route',  href: '/services' },
   { label: 'Contact',  type: 'route',  href: '/contact'  },
 ]
 const NAV_MORE = [
-  { label: 'Blog',     type: 'route',  href: '/blog'     },
-  { label: 'Projects', type: 'route',  href: '/projects' },
-  { label: 'Results',  type: 'scroll', href: 'results'   },
+  { label: 'Agents',   type: 'route',  href: '/agents'           },
+  { label: 'Hesabu',   type: 'route',  href: '/platforms/hesabu' },
+  { label: 'Blog',     type: 'route',  href: '/blog'             },
+  { label: 'Projects', type: 'route',  href: '/projects'         },
+  { label: 'FAQ',      type: 'route',  href: '/faq'              },
+  { label: 'Results',  type: 'scroll', href: 'results'           },
 ]
 const NAV_ALL = [...NAV_PRIMARY, ...NAV_MORE]
 
@@ -295,7 +301,7 @@ function Navbar() {
               {dark ? <Sun size={16} color={C.gold} /> : <Moon size={16} color={C.navy} />}
             </button>
 
-            <BtnGoldLink to="/contact" className="ml-4">Let's Talk</BtnGoldLink>
+            <BtnGoldLink to="/contact" className="ml-4">Contact Us</BtnGoldLink>
           </div>
 
           {/* Mobile burger */}
@@ -331,9 +337,7 @@ function Navbar() {
         >
           {NAV_ALL.map((l, i) => mobileLink(l, i))}
 
-          <div className="mt-8" style={{ opacity: menuOpen ? 1 : 0, transition: 'opacity 0.4s ease 0.4s' }}>
-            <BtnGoldLink to="/contact" onClick={() => setMenuOpen(false)}>Let's Talk</BtnGoldLink>
-          </div>
+          {/* Contact is already in NAV_ALL — no separate CTA button needed */}
         </div>
 
         <p className="text-center pb-8" style={{ color: '#1A3060', fontFamily: FONT_BODY, fontSize: '0.8rem' }}>
@@ -543,6 +547,7 @@ export default function App() {
           <Route path="/blog/:slug"          element={<BlogPage />} />
           <Route path="/projects"            element={<ProjectsPage />} />
           <Route path="/contact"             element={<ContactPage />} />
+          <Route path="/faq"                 element={<FAQPage />} />
           <Route path="/privacy"             element={<PrivacyPage />} />
           <Route path="/terms"               element={<TermsPage />} />
           <Route path="*"                    element={<NotFoundPage />} />
